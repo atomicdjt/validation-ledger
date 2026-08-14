@@ -68,7 +68,7 @@ export function Dashboard() {
   }
 
   const validationGaps = (hypotheses ?? [])
-    .filter((hypothesis) => analyses[hypothesis.id]?.status === 'unvalidated' || analyses[hypothesis.id]?.status === 'validating')
+    .filter((hypothesis) => ['unvalidated', 'weak-evidence', 'mixed'].includes(analyses[hypothesis.id]?.status))
     .slice()
     .sort((a, b) => importanceWeight[b.importance] - importanceWeight[a.importance] || analyses[a.id].score - analyses[b.id].score)
     .slice(0, 4);
@@ -86,8 +86,8 @@ export function Dashboard() {
     { label: 'Hypotheses', value: hypotheses?.length ?? 0, icon: Lightbulb, tone: 'text-primary-700 bg-primary-50' },
     { label: 'Evidence Signals', value: evidence?.length ?? 0, icon: Activity, tone: 'text-primary-700 bg-primary-50' },
     {
-      label: 'Validated',
-      value: hypotheses?.filter((hypothesis) => analyses[hypothesis.id]?.status === 'validated').length ?? 0,
+      label: 'Strong Support',
+      value: hypotheses?.filter((hypothesis) => analyses[hypothesis.id]?.status === 'strongly-supported').length ?? 0,
       icon: CheckCircle2,
       tone: 'text-emerald-700 bg-emerald-50',
     },
@@ -130,7 +130,7 @@ export function Dashboard() {
                 const analysis = analyses[gap.id];
                 const unresolvedReasons = [
                   analysis.uniqueSourcesCount < 3 ? `Only ${analysis.uniqueSourcesCount} independent source${analysis.uniqueSourcesCount === 1 ? '' : 's'}` : null,
-                  !analysis.hasBehavioralEvidence ? 'No behavioral or pricing evidence' : null,
+                  !analysis.evidenceQuality.hasBehavioralEvidence ? 'No behavioral or pricing evidence' : null,
                   analysis.contradictingCount > 0 ? `${analysis.contradictingCount} contradicting signal${analysis.contradictingCount === 1 ? '' : 's'}` : null,
                 ].filter(Boolean);
 

@@ -36,9 +36,9 @@ export function Report() {
   const pricingEvidence = evidence.filter(e => e.classification === 'willingness_to_pay');
 
   // Categorize hypotheses based on validation
-  const validated = hypotheses.filter(h => analyses[h.id]?.status === 'validated');
-  const weak = hypotheses.filter(h => analyses[h.id]?.status === 'unvalidated' || analyses[h.id]?.status === 'validating');
-  const contradicted = hypotheses.filter(h => analyses[h.id]?.status === 'invalidated');
+  const validated = hypotheses.filter(h => analyses[h.id]?.status === 'strongly-supported' || analyses[h.id]?.status === 'moderately-supported');
+  const weak = hypotheses.filter(h => analyses[h.id]?.status === 'unvalidated' || analyses[h.id]?.status === 'weak-evidence' || analyses[h.id]?.status === 'mixed');
+  const contradicted = hypotheses.filter(h => analyses[h.id]?.status === 'contradicted');
 
   return (
     <div className="page-shell max-w-5xl pb-24 print:pb-0">
@@ -72,7 +72,7 @@ export function Report() {
         </header>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">1. Validated Hypotheses</h2>
+          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">1. Supported Hypotheses</h2>
           {validated.length > 0 ? (
             <div className="space-y-4">
               {validated.map(h => (
@@ -85,12 +85,12 @@ export function Report() {
               ))}
             </div>
           ) : (
-            <p className="text-surface-500 italic">No hypotheses have been strongly validated yet.</p>
+            <p className="text-surface-500 italic">No hypotheses have moderate or strong support yet.</p>
           )}
         </section>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">2. Contradicted & Invalidated</h2>
+          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">2. Contradicted Hypotheses</h2>
           {contradicted.length > 0 ? (
             <div className="space-y-4">
               {contradicted.map(h => (

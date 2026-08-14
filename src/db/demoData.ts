@@ -38,7 +38,7 @@ export async function injectDemoData() {
       projectId,
       statement: "Freelancers waste at least 2 hours per week on discovery calls with leads who cannot afford them.",
       category: 'other',
-      status: 'validating',
+      status: 'weak-evidence',
       importance: 'critical',
       confidenceScore: 0,
       createdAt: Date.now()
@@ -48,7 +48,7 @@ export async function injectDemoData() {
       projectId,
       statement: "Freelancers will embed a pricing calculator widget on their own websites.",
       category: 'other',
-      status: 'validating',
+      status: 'weak-evidence',
       importance: 'high',
       confidenceScore: 0,
       createdAt: Date.now()
@@ -58,7 +58,7 @@ export async function injectDemoData() {
       projectId,
       statement: "Freelancers will pay $20/month for this tool.",
       category: 'other',
-      status: 'validating',
+      status: 'weak-evidence',
       importance: 'medium',
       confidenceScore: 0,
       createdAt: Date.now()

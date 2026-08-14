@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
 import { Plus, Trash2, Link } from 'lucide-react';
 import type { Decision } from '../db/models';
+import { deleteDecisionCascade } from '../db/operations';
 
 export function Decisions() {
   const activeProjectId = useStore(state => state.activeProjectId);
@@ -61,11 +62,7 @@ export function Decisions() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this decision?')) {
-      await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
-        await db.decisions.delete(id);
-        await db.hypothesisDecisionLinks.where('decisionId').equals(id).delete();
-        await db.evidenceDecisionLinks.where('decisionId').equals(id).delete();
-      });
+      await deleteDecisionCascade(id);
     }
   };
 
@@ -100,8 +97,9 @@ export function Decisions() {
           <h2 className="text-lg font-semibold mb-4 text-surface-900">Record New Decision</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-surface-700 mb-1">Decision Title *</label>
+              <label htmlFor="decision-title" className="block text-sm font-medium text-surface-700 mb-1">Decision Title *</label>
               <input
+                id="decision-title"
                 type="text"
                 required
                 value={title}
@@ -112,8 +110,9 @@ export function Decisions() {
             </div>
 
             <div>
-              <label className="field-label">Decision Summary</label>
+              <label htmlFor="decision-summary" className="field-label">Decision Summary</label>
               <textarea
+                id="decision-summary"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="field-control min-h-20 resize-y"
@@ -122,8 +121,9 @@ export function Decisions() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 mb-1">Reasoning</label>
+              <label htmlFor="decision-reason" className="block text-sm font-medium text-surface-700 mb-1">Reasoning</label>
               <textarea
+                id="decision-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 className="field-control min-h-24 resize-y"
@@ -155,8 +155,9 @@ export function Decisions() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 mb-1">Confidence in Decision</label>
+              <label htmlFor="decision-confidence" className="block text-sm font-medium text-surface-700 mb-1">Confidence in Decision</label>
               <select
+                id="decision-confidence"
                 value={confidence}
                 onChange={(e) => setConfidence(e.target.value as Decision['confidence'])}
                 className="field-control w-full md:w-1/3"

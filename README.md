@@ -22,8 +22,8 @@ Product discovery often decays into scattered notes and confidence based on repe
 - **Explainable confidence:** score independent sources, segment diversity, behavioral evidence, citations, and contradictions without a black box.
 - **Decision history:** record what was decided, why, and which evidence informed the call.
 - **Local-first privacy:** research records remain in the browser through IndexedDB; there is no application backend or cloud database.
-- **Validated backups:** export versioned JSON and atomically restore only after structural validation succeeds.
-- **Optional AI assistance:** generate structured evidence suggestions with Google Gemini, validate the response, and keep a human review step before saving.
+- **Integrity-checked backups:** export versioned JSON and atomically restore only after complete schema, size, duplicate-ID, and relationship validation succeeds.
+- **Optional AI assistance:** generate untrusted structured suggestions with Google Gemini, verify quoted provenance, and require explicit human acceptance before saving.
 - **Responsive workflow:** polished desktop navigation and purpose-built mobile layouts.
 
 ## Product tour
@@ -66,7 +66,7 @@ npm run build
 npm audit
 ```
 
-The current scoring suite covers source independence, segment diversity, behavioral evidence, direct citations, contradiction penalties, and score bounds. GitHub Actions repeats the test, lint, and production-build gate on every push and pull request.
+The scoring suite covers source independence, segment diversity, behavioral evidence, direct citations, neutral/missing relationships, and counterevidence semantics. GitHub Actions repeats unit tests, lint, production build, dependency audit, Chromium workflow, and automated accessibility checks on every push and pull request.
 
 ## Data ownership and backups
 
@@ -76,13 +76,14 @@ The live demo does not receive or retain application data on a server. Optional 
 
 ## Scoring model
 
-Hypothesis confidence combines:
+Validation Ledger reports support and counterevidence separately. Supporting strength combines:
 
 - independent supporting sources, capped at 60 points;
 - segment diversity, capped at 15 points;
 - behavioral or willingness-to-pay evidence, worth 15 points;
-- direct source citations, capped at 10 points;
-- a 20-point penalty for each independent contradicting source.
+- direct source citations, capped at 10 points.
+
+Counterevidence receives its own independently capped score. Credible support plus contradiction is labeled `mixed`; contradiction without support is `contradicted`. This keeps positive evidence from erasing material counterevidence.
 
 The score is an aid to judgment, not proof of market demand. AI-generated suggestions also require human review.
 

@@ -28,3 +28,9 @@ jobs:
         run: npm run lint
       - name: Build production bundle
         run: npm run build
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser and accessibility tests
+        run: npm run test:e2e
