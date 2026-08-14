@@ -2,9 +2,13 @@
 
 **Turn customer conversations into traceable product decisions.**
 
-[Live demo](https://validation-ledger.vercel.app) · [Architecture](docs/ARCHITECTURE.md) · [Release validation](docs/VALIDATION.md) · [Security](SECURITY.md)
+**Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
+
+[Live demo](https://validation-ledger.vercel.app) · [Architecture](docs/ARCHITECTURE.md) · [Release validation](docs/VALIDATION.md) · [Security](SECURITY.md) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
 
 ![Validation Ledger dashboard](docs/images/dashboard.png)
+
+**More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt)
 
 Validation Ledger is a polished, local-first research workspace for capturing customer evidence, testing product hypotheses, and recording decisions without losing the source material behind them.
 
