@@ -63,7 +63,7 @@ export function Settings() {
         <div className="p-5 sm:p-6">
           <div className="flex gap-3 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm leading-6 text-primary-900">
             <ShieldCheck size={20} className="mt-0.5 shrink-0" />
-            <p>Your Gemini key is stored only in this browser. Validation Ledger has no backend, account system, or cloud database.</p>
+            <p>Your Gemini key is stored in this browser's localStorage and is readable by scripts running on this origin. Use a restricted key for personal use only. Validation Ledger has no backend, account system, or cloud database.</p>
           </div>
           <label className="mt-5 block">
             <span className="field-label">Gemini API Key</span>
@@ -85,14 +85,14 @@ export function Settings() {
         </div>
         <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
           <div>
-            <h3 className="font-semibold text-surface-900">Export a verified backup</h3>
-            <p className="mt-2 text-sm leading-6 text-surface-500">Download every project, source, evidence signal, hypothesis, decision, and relationship as versioned JSON.</p>
+            <h3 className="font-semibold text-surface-900">Export a versioned backup</h3>
+            <p className="mt-2 text-sm leading-6 text-surface-500">Download every project, source, evidence signal, hypothesis, decision, and relationship as JSON. Keep independent copies and periodically test restoration.</p>
             <button type="button" onClick={() => void handleExport()} className="button-secondary mt-4"><Download size={17} />Download Backup</button>
           </div>
           <div className="border-t border-surface-200 pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             <h3 className="font-semibold text-surface-900">Restore from backup</h3>
             <div className="mt-3 flex gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-orange-800">
-              <AlertTriangle className="mt-0.5 shrink-0" size={17} /> Restore replaces all current local data after format validation.
+              <AlertTriangle className="mt-0.5 shrink-0" size={17} /> Restore replaces local data only after complete schema, limits, duplicate-ID, and referential-integrity validation succeeds.
             </div>
             <textarea value={importText} onChange={(event) => setImportText(event.target.value)} className="field-control mt-3 min-h-28 resize-y font-mono text-xs" placeholder="Paste backup JSON here…" />
             {importError ? <p className="mt-2 text-sm text-red-600" role="alert">{importError}</p> : null}

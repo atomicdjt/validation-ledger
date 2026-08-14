@@ -30,9 +30,23 @@ describe('backup validation and atomic restore',()=>{
     ['duplicate id',(x:any)=>{x.projects.push({...x.projects[0]});}],
     ['cross-project reference',(x:any)=>{x.sources[0].projectId='missing';}],
     ['invalid enum',(x:any)=>{x.evidenceSignals[0].relationship='guarantees';}],
+    ['source/evidence segment mismatch',(x:any)=>{x.evidenceSignals[0].segmentId=null;}],
+    ['non-object metadata',(x:any)=>{x.sources[0].metadata='unsafe';}],
   ])('rejects %s without destroying current data',async(_name,mutate)=>{
     await db.projects.add(complete().projects[0]); const backup=complete(); mutate(backup);
     await expect(importDatabase(JSON.stringify(backup))).rejects.toThrow(/invalid backup/i);
     expect(await db.projects.get('p')).toBeTruthy();
+  });
+
+  it('recomputes provenance, directness, and derived hypothesis state during restore',async()=>{
+    const backup=complete();
+    backup.evidenceSignals[0].exactExcerpt='Forged quote';
+    backup.evidenceSignals[0].provenanceState='exact';
+    backup.evidenceSignals[0].isDirect=true;
+    backup.hypotheses[0].confidenceScore=100;
+    backup.hypotheses[0].status='strongly-supported';
+    await importDatabase(JSON.stringify(backup));
+    expect(await db.evidenceSignals.get('e')).toMatchObject({provenanceState:'unverified',isDirect:false});
+    expect(await db.hypotheses.get('h')).toMatchObject({confidenceScore:20,status:'weak-evidence'});
   });
 });
