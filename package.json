@@ -2,7 +2,7 @@
   "name": "validation-ledger",
   "description": "A local-first workspace for traceable product discovery and evidence-based decisions.",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

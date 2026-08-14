@@ -135,7 +135,7 @@ export function Hypotheses() {
                   <h2 className="mt-3 text-base font-semibold leading-6 text-surface-950">{hypothesis.statement}</h2>
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-surface-500">
                     <span className="flex items-center gap-1.5 capitalize">{statusIcon(hypothesis.status)} {hypothesis.status}</span>
-                    <span className="font-semibold text-surface-600">Confidence {hypothesis.confidenceScore}/100</span>
+                    <span className="font-semibold text-surface-600">Support score {hypothesis.confidenceScore}/100</span>
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">

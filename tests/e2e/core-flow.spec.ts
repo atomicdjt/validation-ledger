@@ -32,9 +32,11 @@ test('creates a traceable source-to-decision workflow and exports a backup', asy
   await page.getByRole('button', { name: /Save Notes/ }).click();
   await page.getByRole('button', { name: /Add Manual/ }).click();
   await expect(page.getByText('New observation')).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Direct evidence' })).toBeDisabled();
   await page.getByRole('link', { name: /Decisions/ }).click();
   await page.getByRole('button', { name: /Record Decision/ }).click();
   await page.getByLabel('Decision Title *').fill('Continue validation');
+  await page.getByText('New observation').last().click();
   await page.getByRole('button', { name: 'Record Decision' }).last().click();
   await expect(page.getByText('Continue validation')).toBeVisible();
   await page.getByRole('link', { name: /Report/ }).click();

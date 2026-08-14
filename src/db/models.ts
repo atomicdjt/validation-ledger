@@ -25,7 +25,7 @@ export interface Source {
   date: number;
   type: 'interview' | 'email' | 'survey' | 'sales_call' | 'support' | 'observation' | 'other';
   rawText: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, string | number | boolean | null | string[] | number[] | boolean[]>;
   tags: string[];
 }
 
@@ -44,7 +44,8 @@ export interface EvidenceSignal {
   quantitativeValue?: number;
   notes: string;
   createdAt: number;
-  provenanceState?: ProvenanceState;
+  /** Missing legacy provenance is deliberately treated as unverified by scoring and UI. */
+  provenanceState: ProvenanceState;
 }
 
 export type EvidenceRelationship = EvidenceSignal['relationship'];
