@@ -5,6 +5,7 @@ import { db } from '../db/db';
 import type { Hypothesis } from '../db/models';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
+import { deleteHypothesisCascade } from '../db/operations';
 
 export function Hypotheses() {
   const activeProjectId = useStore((state) => state.activeProjectId);
@@ -68,19 +69,15 @@ export function Hypotheses() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this hypothesis? Evidence will remain but be unlinked, and decision links will be removed.')) return;
-    await db.transaction('rw', db.hypotheses, db.evidenceSignals, db.hypothesisDecisionLinks, async () => {
-      await db.evidenceSignals.where('hypothesisId').equals(id).modify({ hypothesisId: null, relationship: undefined });
-      await db.hypothesisDecisionLinks.where('hypothesisId').equals(id).delete();
-      await db.hypotheses.delete(id);
-    });
+    await deleteHypothesisCascade(id);
   };
 
   if (!activeProjectId) return <div className="py-12 text-center text-surface-500">Please select a project first.</div>;
 
   const statusIcon = (status: Hypothesis['status']) => {
-    if (status === 'validated') return <CheckCircle2 className="text-emerald-600" size={17} />;
-    if (status === 'invalidated') return <XCircle className="text-red-600" size={17} />;
-    return <AlertCircle className={status === 'validating' ? 'text-primary-600' : 'text-surface-400'} size={17} />;
+    if (status === 'strongly-supported' || status === 'moderately-supported') return <CheckCircle2 className="text-emerald-600" size={17} />;
+    if (status === 'contradicted') return <XCircle className="text-red-600" size={17} />;
+    return <AlertCircle className={status === 'mixed' || status === 'weak-evidence' ? 'text-primary-600' : 'text-surface-400'} size={17} />;
   };
 
   return (

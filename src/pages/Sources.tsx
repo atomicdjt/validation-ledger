@@ -6,6 +6,7 @@ import { db } from '../db/db';
 import type { Source } from '../db/models';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
+import { deleteSourceCascade } from '../db/operations';
 
 export function Sources() {
   const activeProjectId = useStore((state) => state.activeProjectId);
@@ -53,14 +54,7 @@ export function Sources() {
   const handleDelete = async (event: MouseEvent, id: string) => {
     event.stopPropagation();
     if (!window.confirm('Delete this source and all of its linked evidence? This cannot be undone.')) return;
-    await db.transaction('rw', db.sources, db.evidenceSignals, db.evidenceDecisionLinks, async () => {
-      const evidenceIds = await db.evidenceSignals.where('sourceId').equals(id).primaryKeys();
-      if (evidenceIds.length > 0) {
-        await db.evidenceDecisionLinks.where('evidenceId').anyOf(evidenceIds).delete();
-        await db.evidenceSignals.bulkDelete(evidenceIds);
-      }
-      await db.sources.delete(id);
-    });
+    await deleteSourceCascade(id);
   };
 
   if (!activeProjectId) return <div className="py-12 text-center text-surface-500">Please select a project first.</div>;

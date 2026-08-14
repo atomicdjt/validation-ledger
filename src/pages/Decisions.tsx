@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
 import { Plus, Trash2, Link } from 'lucide-react';
 import type { Decision } from '../db/models';
+import { deleteDecisionCascade } from '../db/operations';
 
 export function Decisions() {
   const activeProjectId = useStore(state => state.activeProjectId);
@@ -61,11 +62,7 @@ export function Decisions() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this decision?')) {
-      await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
-        await db.decisions.delete(id);
-        await db.hypothesisDecisionLinks.where('decisionId').equals(id).delete();
-        await db.evidenceDecisionLinks.where('decisionId').equals(id).delete();
-      });
+      await deleteDecisionCascade(id);
     }
   };
 

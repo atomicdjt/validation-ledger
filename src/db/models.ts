@@ -35,8 +35,8 @@ export interface EvidenceSignal {
   sourceId: string;
   segmentId: string | null;
   hypothesisId: string | null;
-  relationship?: 'supports' | 'contradicts' | 'neutral';
-  classification: string;
+  relationship: 'supports' | 'contradicts' | 'neutral';
+  classification: EvidenceClassification;
   statement: string;
   exactExcerpt: string;
   isDirect: boolean;
@@ -44,7 +44,20 @@ export interface EvidenceSignal {
   quantitativeValue?: number;
   notes: string;
   createdAt: number;
+  provenanceState?: ProvenanceState;
 }
+
+export type EvidenceRelationship = EvidenceSignal['relationship'];
+export type ProvenanceState = 'exact' | 'normalized' | 'unverified';
+export type EvidenceClassification =
+  | 'pain'
+  | 'workaround'
+  | 'feature_request'
+  | 'willingness_to_pay'
+  | 'objection'
+  | 'positive_reaction'
+  | 'current_solution'
+  | 'other';
 
 export interface Hypothesis {
   id: string;
@@ -52,7 +65,13 @@ export interface Hypothesis {
   statement: string;
   category: string;
   importance: 'low' | 'medium' | 'high' | 'critical';
-  status: 'unvalidated' | 'validating' | 'validated' | 'invalidated';
+  status:
+    | 'unvalidated'
+    | 'weak-evidence'
+    | 'mixed'
+    | 'moderately-supported'
+    | 'strongly-supported'
+    | 'contradicted';
   confidenceScore: number;
   createdAt: number;
   lastReviewed?: number;

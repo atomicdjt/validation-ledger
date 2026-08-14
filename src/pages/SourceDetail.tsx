@@ -11,11 +11,16 @@ import {
   Save,
   Scale,
   Trash2,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../db/db';
 import type { EvidenceSignal, Hypothesis } from '../db/models';
 import { generateId } from '../utils/id';
+import { acceptedSuggestionsToEvidence, prepareEvidenceSuggestions, verifyExcerptProvenance, type StagedEvidenceSuggestion } from '../services/evidenceIntegrity';
+import { deleteEvidenceCascade } from '../db/operations';
+import { updateAllHypothesisScores } from '../services/scoring';
 
 type MobileTab = 'source' | 'evidence';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -49,7 +54,7 @@ function EvidenceEditor({ item, hypotheses, onUpdate, onDelete }: EvidenceEditor
       <div className="space-y-4">
         <label>
           <span className="field-label">Classification</span>
-          <select value={item.classification} onChange={(event) => void onUpdate(item.id, { classification: event.target.value })} className="field-control">
+          <select value={item.classification} onChange={(event) => void onUpdate(item.id, { classification: event.target.value as EvidenceSignal['classification'] })} className="field-control">
             <option value="pain">Pain Point</option>
             <option value="workaround">Workaround</option>
             <option value="current_solution">Current Solution</option>
@@ -67,12 +72,12 @@ function EvidenceEditor({ item, hypotheses, onUpdate, onDelete }: EvidenceEditor
         </label>
 
         <label>
-          <span className="field-label">Exact Provenance Quote</span>
+          <span className="field-label flex items-center justify-between">Provenance Quote <span className={`rounded-full px-2 py-0.5 text-[10px] ${item.provenanceState === 'exact' ? 'bg-emerald-100 text-emerald-800' : item.provenanceState === 'normalized' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>{item.provenanceState ?? 'unverified'}</span></span>
           <textarea value={item.exactExcerpt} onChange={(event) => void onUpdate(item.id, { exactExcerpt: event.target.value })} className="field-control min-h-24 resize-y bg-surface-50" placeholder="Paste the exact words from the source…" />
         </label>
 
         <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-3">
-          <input type="checkbox" checked={item.isDirect} onChange={(event) => void onUpdate(item.id, { isDirect: event.target.checked })} className="mt-0.5 size-4 accent-primary-700" />
+          <input type="checkbox" checked={item.isDirect} disabled={item.provenanceState === 'unverified'} onChange={(event) => void onUpdate(item.id, { isDirect: event.target.checked })} className="mt-0.5 size-4 accent-primary-700" />
           <span>
             <span className="block text-sm font-semibold text-surface-800">Direct evidence</span>
             <span className="block text-xs leading-5 text-surface-500">This signal is stated directly rather than inferred.</span>
@@ -94,7 +99,7 @@ function EvidenceEditor({ item, hypotheses, onUpdate, onDelete }: EvidenceEditor
             <legend className="field-label">Relationship</legend>
             <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-surface-300 bg-white">
               {relationships.map((relationship, index) => {
-                const selected = (item.relationship || 'supports') === relationship.value;
+                const selected = item.relationship === relationship.value;
                 const selectedTone = relationship.value === 'contradicts'
                   ? 'bg-red-50 text-red-700'
                   : relationship.value === 'supports'
@@ -141,6 +146,7 @@ export function SourceDetail() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState('');
   const [mobileTab, setMobileTab] = useState<MobileTab>('source');
+  const [suggestions, setSuggestions] = useState<StagedEvidenceSuggestion[]>([]);
 
   useEffect(() => {
     if (source) setRawText(source.rawText || '');
@@ -170,6 +176,7 @@ export function SourceDetail() {
       sourceId: source.id,
       segmentId: source.segmentId,
       hypothesisId: null,
+      relationship: 'neutral',
       classification: 'pain',
       statement: 'New observation',
       exactExcerpt: '',
@@ -177,6 +184,7 @@ export function SourceDetail() {
       confidence: 5,
       notes: '',
       createdAt: Date.now(),
+      provenanceState: 'unverified',
     };
     await db.evidenceSignals.add(newEvidence);
     setMobileTab('evidence');
@@ -190,25 +198,11 @@ export function SourceDetail() {
       if (!(await handleSave())) return;
       const { extractEvidence } = await import('../services/ai');
       const extracted = await extractEvidence(rawText, hypotheses);
-      const newSignals: EvidenceSignal[] = extracted.map((item) => ({
-        id: generateId(),
-        projectId: source.projectId,
-        sourceId: source.id,
-        segmentId: source.segmentId,
-        hypothesisId: item.hypothesisId || null,
-        relationship: item.relationship || 'supports',
-        classification: item.classification || 'other',
-        statement: item.statement,
-        exactExcerpt: item.exactExcerpt || '',
-        isDirect: item.isDirect,
-        confidence: 5,
-        notes: '',
-        createdAt: Date.now(),
-      }));
-      if (newSignals.length === 0) {
+      const staged = prepareEvidenceSuggestions(extracted, rawText, hypotheses, source.projectId);
+      if (staged.length === 0) {
         setError('No actionable evidence was found. Try adding a manual observation or expanding the source notes.');
       } else {
-        await db.evidenceSignals.bulkAdd(newSignals);
+        setSuggestions(staged);
         setMobileTab('evidence');
       }
     } catch (caughtError) {
@@ -219,12 +213,59 @@ export function SourceDetail() {
   };
 
   const updateEvidence = async (evidenceId: string, updates: Partial<EvidenceSignal>) => {
-    await db.evidenceSignals.update(evidenceId, updates);
+    try {
+      setError('');
+      const next = { ...updates };
+      if (typeof updates.exactExcerpt === 'string') {
+        const provenance = verifyExcerptProvenance(rawText, updates.exactExcerpt);
+        next.provenanceState = provenance.state;
+        if (provenance.state === 'unverified') next.isDirect = false;
+      }
+      if (updates.hypothesisId === null) next.relationship = 'neutral';
+      await db.evidenceSignals.update(evidenceId, next);
+      await updateAllHypothesisScores(source.projectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Could not update this evidence signal.');
+    }
   };
 
   const deleteEvidence = async (evidenceId: string) => {
     if (window.confirm('Delete this evidence signal? This cannot be undone.')) {
-      await db.evidenceSignals.delete(evidenceId);
+      try {
+        await deleteEvidenceCascade(evidenceId);
+        await updateAllHypothesisScores(source.projectId);
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : 'Could not delete this evidence signal.');
+      }
+    }
+  };
+
+  const updateSuggestion = (tempId: string, updates: Partial<StagedEvidenceSuggestion>) => {
+    setSuggestions((current) => current.map((suggestion) => {
+      if (suggestion.tempId !== tempId) return suggestion;
+      const next = { ...suggestion, ...updates };
+      if (typeof updates.exactExcerpt === 'string') {
+        next.provenance = verifyExcerptProvenance(rawText, updates.exactExcerpt);
+        if (next.provenance.state === 'unverified') next.isDirect = false;
+      }
+      if (updates.hypothesisId === null) next.relationship = 'neutral';
+      return next;
+    }));
+  };
+
+  const acceptSelectedSuggestions = async () => {
+    const accepted = acceptedSuggestionsToEvidence(suggestions, source);
+    if (accepted.length === 0) {
+      setError('Select at least one reviewed suggestion to accept.');
+      return;
+    }
+    try {
+      setError('');
+      await db.transaction('rw', db.evidenceSignals, async () => db.evidenceSignals.bulkAdd(accepted));
+      setSuggestions([]);
+      await updateAllHypothesisScores(source.projectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : 'Could not accept the reviewed suggestions.');
     }
   };
 
@@ -285,6 +326,7 @@ export function SourceDetail() {
             </button>
           </div>
         </div>
+        <p className="mt-3 text-xs leading-5 text-surface-500">AI is optional. Selecting Analyze sends this source text to Google Gemini. Suggestions remain untrusted and are not stored until you review and accept them.</p>
         {error ? <p className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p> : null}
       </section>
 
@@ -322,6 +364,39 @@ export function SourceDetail() {
             </button>
           </div>
           <div className="space-y-4 bg-surface-50/70 p-4 sm:p-5">
+            {suggestions.length > 0 ? (
+              <section className="rounded-xl border-2 border-primary-200 bg-white p-4 shadow-sm" aria-labelledby="ai-review-title">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary-800"><ShieldCheck size={18} /><h3 id="ai-review-title" className="font-bold">AI Evidence Review</h3></div>
+                    <p className="mt-1 text-xs leading-5 text-surface-500">Verify each claim and quote. Nothing below is evidence until accepted.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" className="button-secondary px-3" onClick={() => setSuggestions([])}><X size={16} /> Reject all</button>
+                    <button type="button" className="button-primary px-3" onClick={() => void acceptSelectedSuggestions()}><Check size={16} /> Accept selected</button>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {suggestions.map((suggestion) => (
+                    <article key={suggestion.tempId} className="rounded-lg border border-surface-200 bg-surface-50 p-3">
+                      <div className="flex items-start gap-3">
+                        <input aria-label="Select suggestion" type="checkbox" checked={suggestion.selected} onChange={(event) => updateSuggestion(suggestion.tempId, { selected: event.target.checked })} className="mt-1 size-4 accent-primary-700" />
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-wide text-surface-500">{suggestion.classification.replace(/_/g, ' ')}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${suggestion.provenance.state === 'exact' ? 'bg-emerald-100 text-emerald-800' : suggestion.provenance.state === 'normalized' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>{suggestion.provenance.state} provenance</span></div>
+                          <textarea aria-label="Suggested observation" value={suggestion.statement} onChange={(event) => updateSuggestion(suggestion.tempId, { statement: event.target.value })} className="field-control min-h-20 resize-y" />
+                          <textarea aria-label="Suggested provenance quote" value={suggestion.exactExcerpt} onChange={(event) => updateSuggestion(suggestion.tempId, { exactExcerpt: event.target.value })} className="field-control min-h-20 resize-y bg-white" />
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <select aria-label="Suggested hypothesis" value={suggestion.hypothesisId ?? ''} onChange={(event) => updateSuggestion(suggestion.tempId, { hypothesisId: event.target.value || null })} className="field-control"><option value="">No linked hypothesis</option>{hypotheses.map((hypothesis) => <option key={hypothesis.id} value={hypothesis.id}>{hypothesis.statement}</option>)}</select>
+                            <select aria-label="Suggested relationship" disabled={!suggestion.hypothesisId} value={suggestion.relationship} onChange={(event) => updateSuggestion(suggestion.tempId, { relationship: event.target.value as EvidenceSignal['relationship'] })} className="field-control"><option value="neutral">Neutral</option><option value="supports">Supports</option><option value="contradicts">Contradicts</option></select>
+                          </div>
+                          {suggestion.warnings.length > 0 ? <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs leading-5 text-amber-800">{suggestion.warnings.join(' ')}</p> : null}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
             {evidence.map((item) => (
               <EvidenceEditor key={item.id} item={item} hypotheses={hypotheses} onUpdate={updateEvidence} onDelete={deleteEvidence} />
             ))}

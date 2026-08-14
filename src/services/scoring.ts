@@ -1,132 +1,123 @@
 import { db } from '../db/db';
 import type { EvidenceSignal, Hypothesis } from '../db/models';
 
+type ScorableEvidence = Pick<EvidenceSignal, 'sourceId' | 'segmentId' | 'classification' | 'isDirect'> &
+  Partial<Pick<EvidenceSignal, 'relationship'>>;
+
+interface Coverage {
+  uniqueSources: number;
+  uniqueSegments: number;
+  directEvidenceCount: number;
+  hasBehavioralEvidence: boolean;
+}
+
 export interface HypothesisAnalysis {
   hypothesisId: string;
-  score: number; // 0 to 100
+  score: number;
+  supportScore: number;
+  counterEvidenceScore: number;
   status: Hypothesis['status'];
   supportingCount: number;
   contradictingCount: number;
   neutralCount: number;
   uniqueSourcesCount: number;
-  uniqueSegmentsCount: number;
-  directEvidenceCount: number;
-  hasBehavioralEvidence: boolean;
+  uniqueSupportingSourcesCount: number;
+  supportCoverage: Coverage;
+  counterEvidenceCoverage: Coverage;
+  evidenceQuality: Coverage;
   reasons: string[];
+}
+
+const BEHAVIORAL_CLASSIFICATIONS = new Set([
+  'willingness_to_pay',
+  'workaround',
+  'current_solution',
+]);
+
+function coverageFor(evidence: ReadonlyArray<ScorableEvidence>): Coverage {
+  return {
+    uniqueSources: new Set(evidence.map((item) => item.sourceId)).size,
+    uniqueSegments: new Set(evidence.map((item) => item.segmentId).filter(Boolean)).size,
+    directEvidenceCount: evidence.filter((item) => item.isDirect).length,
+    hasBehavioralEvidence: evidence.some((item) => BEHAVIORAL_CLASSIFICATIONS.has(item.classification)),
+  };
+}
+
+function strengthScore(
+  evidence: ReadonlyArray<ScorableEvidence>,
+  sourcePoints: number,
+  sourceCap: number,
+): number {
+  const coverage = coverageFor(evidence);
+  const sourceScore = Math.min(sourceCap, coverage.uniqueSources * sourcePoints);
+  const segmentScore = coverage.uniqueSegments >= 2 ? 15 : coverage.uniqueSegments === 1 ? 5 : 0;
+  const behaviorScore = coverage.hasBehavioralEvidence ? 15 : 0;
+  const directnessScore = Math.min(10, coverage.directEvidenceCount * 2);
+  return Math.min(100, sourceScore + segmentScore + behaviorScore + directnessScore);
+}
+
+export function calculateScore(evidence: ReadonlyArray<ScorableEvidence>) {
+  const supporting = evidence.filter((item) => item.relationship === 'supports');
+  const contradicting = evidence.filter((item) => item.relationship === 'contradicts');
+  const neutral = evidence.filter((item) => item.relationship !== 'supports' && item.relationship !== 'contradicts');
+  const supportCoverage = coverageFor(supporting);
+  const counterEvidenceCoverage = coverageFor(contradicting);
+  const evidenceQuality = coverageFor(evidence);
+  const supportScore = strengthScore(supporting, 15, 60);
+  const counterEvidenceScore = strengthScore(contradicting, 20, 60);
+
+  let status: Hypothesis['status'];
+  if (supporting.length > 0 && contradicting.length > 0) status = 'mixed';
+  else if (contradicting.length > 0) status = 'contradicted';
+  else if (supportScore >= 75) status = 'strongly-supported';
+  else if (supportScore >= 30) status = 'moderately-supported';
+  else if (supportScore > 0) status = 'weak-evidence';
+  else status = 'unvalidated';
+
+  const reasons: string[] = [];
+  if (supportCoverage.uniqueSources > 0) {
+    reasons.push(`${supportCoverage.uniqueSources} independent supporting source${supportCoverage.uniqueSources === 1 ? '' : 's'}.`);
+  }
+  if (counterEvidenceCoverage.uniqueSources > 0) {
+    reasons.push(`${counterEvidenceCoverage.uniqueSources} independent contradicting source${counterEvidenceCoverage.uniqueSources === 1 ? '' : 's'}.`);
+  }
+  if (neutral.length > 0) reasons.push(`${neutral.length} neutral or unresolved signal${neutral.length === 1 ? '' : 's'}.`);
+  if (evidence.length === 0) reasons.push('No evidence gathered yet.');
+
+  return {
+    score: supportScore,
+    supportScore,
+    counterEvidenceScore,
+    status,
+    supportingCount: supporting.length,
+    contradictingCount: contradicting.length,
+    neutralCount: neutral.length,
+    uniqueSourcesCount: evidenceQuality.uniqueSources,
+    uniqueSupportingSourcesCount: supportCoverage.uniqueSources,
+    supportCoverage,
+    counterEvidenceCoverage,
+    evidenceQuality,
+    reasons,
+  };
 }
 
 export async function analyzeHypothesis(hypothesisId: string): Promise<HypothesisAnalysis> {
   const hypothesis = await db.hypotheses.get(hypothesisId);
   if (!hypothesis) throw new Error('Hypothesis not found');
   const evidence = await db.evidenceSignals.where('hypothesisId').equals(hypothesisId).toArray();
-
   const result = calculateScore(evidence);
 
-  // Save the updated score and status to the hypothesis
   if (hypothesis.confidenceScore !== result.score || hypothesis.status !== result.status) {
     await db.hypotheses.update(hypothesisId, {
       confidenceScore: result.score,
-      status: result.status
+      status: result.status,
+      lastReviewed: Date.now(),
     });
   }
-
-  return {
-    hypothesisId,
-    ...result
-  };
+  return { hypothesisId, ...result };
 }
 
-type ScorableEvidence = Pick<EvidenceSignal, 'sourceId' | 'segmentId' | 'classification' | 'isDirect'> &
-  Partial<Pick<EvidenceSignal, 'relationship'>>;
-
-export function calculateScore(evidence: ReadonlyArray<ScorableEvidence>) {
-  const supporting = evidence.filter(e => (e.relationship || 'supports') === 'supports');
-  const contradicting = evidence.filter(e => e.relationship === 'contradicts');
-  const neutral = evidence.filter(e => e.relationship === 'neutral');
-
-  const uniqueSourcesCount = new Set(evidence.map(e => e.sourceId)).size;
-  const uniqueSegmentsCount = new Set(evidence.map(e => e.segmentId).filter(Boolean)).size;
-  const directEvidenceCount = evidence.filter(e => e.isDirect).length;
-  const hasBehavioralEvidence = evidence.some(e =>
-    e.classification === 'willingness_to_pay' || e.classification === 'workaround' || e.classification === 'current_solution'
-  );
-
-  let score = 0;
-  const reasons: string[] = [];
-
-  // Deterministic scoring logic:
-  // Base score from supporting unique sources (max 60)
-  // Each unique supporting source adds 15 points
-  const uniqueSupportingSources = new Set(supporting.map(e => e.sourceId)).size;
-  let supportingScore = Math.min(60, uniqueSupportingSources * 15);
-  if (uniqueSupportingSources > 0) {
-    reasons.push(`+${supportingScore} from ${uniqueSupportingSources} independent supporting sources.`);
-  }
-
-  // Segment diversity (max 15)
-  let segmentScore = 0;
-  if (uniqueSegmentsCount >= 2) {
-    segmentScore = 15;
-    reasons.push(`+15 from evidence diversity (${uniqueSegmentsCount} segments).`);
-  } else if (uniqueSegmentsCount === 1) {
-    segmentScore = 5;
-    reasons.push(`+5 from evidence limited to 1 segment.`);
-  }
-
-  // Behavioral evidence (max 15)
-  let behaviorScore = 0;
-  if (hasBehavioralEvidence) {
-    behaviorScore = 15;
-    reasons.push(`+15 for behavioral/pricing evidence.`);
-  }
-
-  // Directness (max 10)
-  let directnessScore = 0;
-  if (directEvidenceCount > 0) {
-    directnessScore = Math.min(10, directEvidenceCount * 2);
-    reasons.push(`+${directnessScore} for direct evidence citations.`);
-  }
-
-  score = supportingScore + segmentScore + behaviorScore + directnessScore;
-
-  // Penalize for contradictions
-  const uniqueContradictingSources = new Set(contradicting.map(e => e.sourceId)).size;
-  if (uniqueContradictingSources > 0) {
-    const penalty = uniqueContradictingSources * 20;
-    score = Math.max(0, score - penalty);
-    reasons.push(`-${penalty} penalty due to ${uniqueContradictingSources} contradicting sources.`);
-  }
-
-  // Determine status based on score and contradictions
-  let status: Hypothesis['status'] = 'unvalidated';
-
-  if (uniqueContradictingSources >= 2 && score < 40) {
-    status = 'invalidated';
-  } else if (score >= 75) {
-    status = 'validated';
-  } else if (score >= 30 || uniqueContradictingSources > 0) {
-    status = 'validating';
-  }
-
-  if (evidence.length === 0) {
-    reasons.push('No evidence gathered yet.');
-  }
-
-  return {
-    score,
-    status,
-    supportingCount: supporting.length,
-    contradictingCount: contradicting.length,
-    neutralCount: neutral.length,
-    uniqueSourcesCount,
-    uniqueSegmentsCount,
-    directEvidenceCount,
-    hasBehavioralEvidence,
-    reasons
-  };
-}
-
-export async function updateAllHypothesisScores(projectId: string) {
+export async function updateAllHypothesisScores(projectId: string): Promise<void> {
   const hypotheses = await db.hypotheses.where('projectId').equals(projectId).toArray();
   await Promise.all(hypotheses.map((hypothesis) => analyzeHypothesis(hypothesis.id)));
 }
