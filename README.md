@@ -14,12 +14,12 @@ Source → Evidence signal → Hypothesis → Decision
 
 ## Why it exists
 
-Product discovery often decays into scattered notes and confidence based on repetition rather than evidence. Validation Ledger keeps the full reasoning chain inspectable: exact excerpts remain attached to sources, supporting and contradicting evidence stay distinct, and hypothesis confidence is calculated with a deterministic, explainable model.
+Product discovery often decays into scattered notes and conclusions based on repetition rather than evidence. Validation Ledger keeps the full reasoning chain inspectable: verified excerpts remain attached to sources, supporting and contradicting evidence stay distinct, and hypothesis support strength is calculated with a deterministic, explainable model.
 
 ## Highlights
 
 - **Traceable evidence:** connect exact source excerpts to hypotheses as supporting, contradicting, or neutral signals.
-- **Explainable confidence:** score independent sources, segment diversity, behavioral evidence, citations, and contradictions without a black box.
+- **Explainable support strength:** score independent sources, segment diversity, behavioral evidence, verified citations, and contradictions without a black box.
 - **Decision history:** record what was decided, why, and which evidence informed the call.
 - **Local-first privacy:** research records remain in the browser through IndexedDB; there is no application backend or cloud database.
 - **Integrity-checked backups:** export versioned JSON and atomically restore only after complete schema, size, duplicate-ID, and relationship validation succeeds.
@@ -66,7 +66,7 @@ npm run build
 npm audit
 ```
 
-The scoring suite covers source independence, segment diversity, behavioral evidence, direct citations, neutral/missing relationships, and counterevidence semantics. GitHub Actions repeats unit tests, lint, production build, dependency audit, Chromium workflow, and automated accessibility checks on every push and pull request.
+The scoring suite covers source independence, segment diversity, behavioral evidence, direct citations, neutral/missing relationships, counterevidence semantics, and source-text revalidation. GitHub Actions repeats unit tests, lint, production build, dependency audit, Chromium workflow, and automated accessibility checks on every push and pull request.
 
 ## Data ownership and backups
 
@@ -85,7 +85,7 @@ Validation Ledger reports support and counterevidence separately. Supporting str
 
 Counterevidence receives its own independently capped score. Credible support plus contradiction is labeled `mixed`; contradiction without support is `contradicted`. This keeps positive evidence from erasing material counterevidence.
 
-The score is an aid to judgment, not proof of market demand. AI-generated suggestions also require human review.
+Only excerpts that match the saved source exactly or through conservative whitespace/quotation normalization may be treated as direct evidence. Missing or unverified provenance is displayed as an inference, never as a quote. The score is an aid to judgment, not proof of market demand. AI-generated suggestions also require human review.
 
 ## Documentation
 

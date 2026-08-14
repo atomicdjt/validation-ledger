@@ -18,6 +18,10 @@ export function Decisions() {
     () => activeProjectId ? db.hypotheses.where('projectId').equals(activeProjectId).toArray() : [],
     [activeProjectId]
   );
+  const evidence = useLiveQuery(
+    () => activeProjectId ? db.evidenceSignals.where('projectId').equals(activeProjectId).reverse().sortBy('createdAt') : [],
+    [activeProjectId],
+  );
 
   const [isCreating, setIsCreating] = useState(false);
   const [title, setTitle] = useState('');
@@ -25,6 +29,7 @@ export function Decisions() {
   const [reason, setReason] = useState('');
   const [confidence, setConfidence] = useState<Decision['confidence']>('moderate');
   const [selectedHypotheses, setSelectedHypotheses] = useState<string[]>([]);
+  const [selectedEvidence, setSelectedEvidence] = useState<string[]>([]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +45,7 @@ export function Decisions() {
       createdAt: Date.now(),
     };
 
-    await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, async () => {
+    await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
       await db.decisions.add(newDecision);
       for (const hId of selectedHypotheses) {
         await db.hypothesisDecisionLinks.add({
@@ -50,6 +55,9 @@ export function Decisions() {
           decisionId: newDecision.id
         });
       }
+      for (const evidenceId of selectedEvidence) {
+        await db.evidenceDecisionLinks.add({ id: generateId(), projectId: activeProjectId, evidenceId, decisionId: newDecision.id });
+      }
     });
 
     setIsCreating(false);
@@ -58,6 +66,7 @@ export function Decisions() {
     setReason('');
     setConfidence('moderate');
     setSelectedHypotheses([]);
+    setSelectedEvidence([]);
   };
 
   const handleDelete = async (id: string) => {
@@ -71,6 +80,7 @@ export function Decisions() {
       prev.includes(id) ? prev.filter(h => h !== id) : [...prev, id]
     );
   };
+  const toggleEvidence = (id: string) => setSelectedEvidence((previous) => previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]);
 
   if (!activeProjectId) {
     return <div className="text-center py-12 text-surface-500">Please select a project first.</div>;
@@ -149,6 +159,20 @@ export function Decisions() {
                       <div className="text-sm font-medium text-surface-900">{h.statement}</div>
                       <div className="text-xs text-surface-500 uppercase">{h.category} • {h.status}</div>
                     </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-surface-700 mb-2">Link Evidence</label>
+              <p className="mb-2 text-xs text-surface-500">Attach the source-backed observations that materially informed this decision.</p>
+              <div className="max-h-56 overflow-y-auto rounded-md border border-surface-200 p-2 space-y-1">
+                {evidence?.length === 0 && <div className="p-2 text-sm text-surface-500">No evidence available to link.</div>}
+                {evidence?.map((item) => (
+                  <label key={item.id} className="flex items-start gap-2 rounded p-2 hover:bg-surface-50 cursor-pointer">
+                    <input type="checkbox" checked={selectedEvidence.includes(item.id)} onChange={() => toggleEvidence(item.id)} className="mt-1 rounded text-primary-600 focus:ring-primary-500" />
+                    <span><span className="block text-sm font-medium text-surface-900">{item.statement}</span><span className="block text-xs text-surface-500">{item.relationship} · {item.provenanceState ?? 'unverified'} provenance</span></span>
                   </label>
                 ))}
               </div>
@@ -240,14 +264,20 @@ function ScaleIcon({ size }: { size: number }) {
 }
 
 function DecisionLinks({ decisionId }: { decisionId: string }) {
-  const links = useLiveQuery(() => db.hypothesisDecisionLinks.where('decisionId').equals(decisionId).toArray(), [decisionId]);
+  const links = useLiveQuery(async () => {
+    const [hypotheses, evidence] = await Promise.all([
+      db.hypothesisDecisionLinks.where('decisionId').equals(decisionId).toArray(),
+      db.evidenceDecisionLinks.where('decisionId').equals(decisionId).toArray(),
+    ]);
+    return { hypotheses, evidence };
+  }, [decisionId]);
 
-  if (!links || links.length === 0) return null;
+  if (!links || links.hypotheses.length + links.evidence.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 text-surface-500" title={`${links.length} hypotheses linked`}>
+    <div className="flex items-center gap-1 text-surface-500" title={`${links.hypotheses.length} hypotheses and ${links.evidence.length} evidence signals linked`}>
       <Link size={14} />
-      <span className="text-xs">{links.length}</span>
+      <span className="text-xs">{links.hypotheses.length + links.evidence.length}</span>
     </div>
   );
 }

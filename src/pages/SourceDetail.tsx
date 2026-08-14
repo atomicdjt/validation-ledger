@@ -17,9 +17,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../db/db';
 import type { EvidenceSignal, Hypothesis } from '../db/models';
-import { generateId } from '../utils/id';
-import { acceptedSuggestionsToEvidence, prepareEvidenceSuggestions, verifyExcerptProvenance, type StagedEvidenceSuggestion } from '../services/evidenceIntegrity';
-import { deleteEvidenceCascade } from '../db/operations';
+import { acceptedSuggestionsToEvidence, EVIDENCE_CLASSIFICATIONS, prepareEvidenceSuggestions, verifyExcerptProvenance, type StagedEvidenceSuggestion } from '../services/evidenceIntegrity';
+import { addAcceptedEvidence, addManualEvidence, deleteEvidenceCascade, updateEvidenceWithCanonicalProvenance, updateSourceTextWithEvidenceRevalidation } from '../db/operations';
 import { updateAllHypothesisScores } from '../services/scoring';
 
 type MobileTab = 'source' | 'evidence';
@@ -157,7 +156,7 @@ export function SourceDetail() {
     try {
       setSaveState('saving');
       setError('');
-      await db.sources.update(id, { rawText });
+      await updateSourceTextWithEvidenceRevalidation(id, rawText);
       setSaveState('saved');
       window.setTimeout(() => setSaveState('idle'), 1800);
       return true;
@@ -170,23 +169,7 @@ export function SourceDetail() {
 
   const handleAddManualEvidence = async () => {
     if (!source) return;
-    const newEvidence: EvidenceSignal = {
-      id: generateId(),
-      projectId: source.projectId,
-      sourceId: source.id,
-      segmentId: source.segmentId,
-      hypothesisId: null,
-      relationship: 'neutral',
-      classification: 'pain',
-      statement: 'New observation',
-      exactExcerpt: '',
-      isDirect: true,
-      confidence: 5,
-      notes: '',
-      createdAt: Date.now(),
-      provenanceState: 'unverified',
-    };
-    await db.evidenceSignals.add(newEvidence);
+    await addManualEvidence(source);
     setMobileTab('evidence');
   };
 
@@ -215,15 +198,7 @@ export function SourceDetail() {
   const updateEvidence = async (evidenceId: string, updates: Partial<EvidenceSignal>) => {
     try {
       setError('');
-      const next = { ...updates };
-      if (typeof updates.exactExcerpt === 'string') {
-        const provenance = verifyExcerptProvenance(rawText, updates.exactExcerpt);
-        next.provenanceState = provenance.state;
-        if (provenance.state === 'unverified') next.isDirect = false;
-      }
-      if (updates.hypothesisId === null) next.relationship = 'neutral';
-      await db.evidenceSignals.update(evidenceId, next);
-      await updateAllHypothesisScores(source.projectId);
+      await updateEvidenceWithCanonicalProvenance(evidenceId, updates);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Could not update this evidence signal.');
     }
@@ -245,7 +220,7 @@ export function SourceDetail() {
       if (suggestion.tempId !== tempId) return suggestion;
       const next = { ...suggestion, ...updates };
       if (typeof updates.exactExcerpt === 'string') {
-        next.provenance = verifyExcerptProvenance(rawText, updates.exactExcerpt);
+        next.provenance = verifyExcerptProvenance(source.rawText, updates.exactExcerpt);
         if (next.provenance.state === 'unverified') next.isDirect = false;
       }
       if (updates.hypothesisId === null) next.relationship = 'neutral';
@@ -261,9 +236,8 @@ export function SourceDetail() {
     }
     try {
       setError('');
-      await db.transaction('rw', db.evidenceSignals, async () => db.evidenceSignals.bulkAdd(accepted));
+      await addAcceptedEvidence(accepted);
       setSuggestions([]);
-      await updateAllHypothesisScores(source.projectId);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'Could not accept the reviewed suggestions.');
     }
@@ -382,13 +356,15 @@ export function SourceDetail() {
                       <div className="flex items-start gap-3">
                         <input aria-label="Select suggestion" type="checkbox" checked={suggestion.selected} onChange={(event) => updateSuggestion(suggestion.tempId, { selected: event.target.checked })} className="mt-1 size-4 accent-primary-700" />
                         <div className="min-w-0 flex-1 space-y-3">
-                          <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-wide text-surface-500">{suggestion.classification.replace(/_/g, ' ')}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${suggestion.provenance.state === 'exact' ? 'bg-emerald-100 text-emerald-800' : suggestion.provenance.state === 'normalized' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>{suggestion.provenance.state} provenance</span></div>
+                          <div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${suggestion.provenance.state === 'exact' ? 'bg-emerald-100 text-emerald-800' : suggestion.provenance.state === 'normalized' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>{suggestion.provenance.state} provenance</span><button type="button" onClick={() => setSuggestions((current) => current.filter((item) => item.tempId !== suggestion.tempId))} className="ml-auto text-xs font-semibold text-surface-500 hover:text-red-700">Reject</button></div>
+                          <select aria-label="Suggested classification" value={suggestion.classification} onChange={(event) => updateSuggestion(suggestion.tempId, { classification: event.target.value as EvidenceSignal['classification'] })} className="field-control">{EVIDENCE_CLASSIFICATIONS.map((classification) => <option key={classification} value={classification}>{classification.replace(/_/g, ' ')}</option>)}</select>
                           <textarea aria-label="Suggested observation" value={suggestion.statement} onChange={(event) => updateSuggestion(suggestion.tempId, { statement: event.target.value })} className="field-control min-h-20 resize-y" />
                           <textarea aria-label="Suggested provenance quote" value={suggestion.exactExcerpt} onChange={(event) => updateSuggestion(suggestion.tempId, { exactExcerpt: event.target.value })} className="field-control min-h-20 resize-y bg-white" />
                           <div className="grid gap-2 sm:grid-cols-2">
                             <select aria-label="Suggested hypothesis" value={suggestion.hypothesisId ?? ''} onChange={(event) => updateSuggestion(suggestion.tempId, { hypothesisId: event.target.value || null })} className="field-control"><option value="">No linked hypothesis</option>{hypotheses.map((hypothesis) => <option key={hypothesis.id} value={hypothesis.id}>{hypothesis.statement}</option>)}</select>
                             <select aria-label="Suggested relationship" disabled={!suggestion.hypothesisId} value={suggestion.relationship} onChange={(event) => updateSuggestion(suggestion.tempId, { relationship: event.target.value as EvidenceSignal['relationship'] })} className="field-control"><option value="neutral">Neutral</option><option value="supports">Supports</option><option value="contradicts">Contradicts</option></select>
                           </div>
+                          <label className="flex items-start gap-2 rounded-md border border-surface-200 bg-white px-3 py-2 text-xs text-surface-700"><input aria-label="Suggested direct evidence" type="checkbox" checked={suggestion.isDirect} disabled={suggestion.provenance.state === 'unverified'} onChange={(event) => updateSuggestion(suggestion.tempId, { isDirect: event.target.checked })} className="mt-0.5 size-4 accent-primary-700" /><span><strong>Direct evidence</strong><br />{suggestion.provenance.state === 'unverified' ? 'Unavailable until the quote is corrected against saved source text.' : 'The source states this observation directly.'}</span></label>
                           {suggestion.warnings.length > 0 ? <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs leading-5 text-amber-800">{suggestion.warnings.join(' ')}</p> : null}
                         </div>
                       </div>

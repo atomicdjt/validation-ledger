@@ -2,7 +2,7 @@ import { db } from '../db/db';
 import type { EvidenceSignal, Hypothesis } from '../db/models';
 
 type ScorableEvidence = Pick<EvidenceSignal, 'sourceId' | 'segmentId' | 'classification' | 'isDirect'> &
-  Partial<Pick<EvidenceSignal, 'relationship'>>;
+  Partial<Pick<EvidenceSignal, 'relationship' | 'provenanceState'>>;
 
 interface Coverage {
   uniqueSources: number;
@@ -22,6 +22,7 @@ export interface HypothesisAnalysis {
   neutralCount: number;
   uniqueSourcesCount: number;
   uniqueSupportingSourcesCount: number;
+  uniqueContradictingSourcesCount: number;
   supportCoverage: Coverage;
   counterEvidenceCoverage: Coverage;
   evidenceQuality: Coverage;
@@ -38,7 +39,7 @@ function coverageFor(evidence: ReadonlyArray<ScorableEvidence>): Coverage {
   return {
     uniqueSources: new Set(evidence.map((item) => item.sourceId)).size,
     uniqueSegments: new Set(evidence.map((item) => item.segmentId).filter(Boolean)).size,
-    directEvidenceCount: evidence.filter((item) => item.isDirect).length,
+    directEvidenceCount: evidence.filter((item) => item.isDirect && (item.provenanceState === 'exact' || item.provenanceState === 'normalized')).length,
     hasBehavioralEvidence: evidence.some((item) => BEHAVIORAL_CLASSIFICATIONS.has(item.classification)),
   };
 }
@@ -94,6 +95,7 @@ export function calculateScore(evidence: ReadonlyArray<ScorableEvidence>) {
     neutralCount: neutral.length,
     uniqueSourcesCount: evidenceQuality.uniqueSources,
     uniqueSupportingSourcesCount: supportCoverage.uniqueSources,
+    uniqueContradictingSourcesCount: counterEvidenceCoverage.uniqueSources,
     supportCoverage,
     counterEvidenceCoverage,
     evidenceQuality,

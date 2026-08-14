@@ -3,7 +3,7 @@ import type { EvidenceSignal } from '../db/models';
 import { calculateScore } from './scoring';
 
 type TestEvidence = Pick<EvidenceSignal, 'sourceId' | 'segmentId' | 'classification' | 'isDirect'> &
-  Partial<Pick<EvidenceSignal, 'relationship'>>;
+  Partial<Pick<EvidenceSignal, 'relationship' | 'provenanceState'>>;
 
 function signal(overrides: Partial<TestEvidence> = {}): TestEvidence {
   return {
@@ -12,6 +12,7 @@ function signal(overrides: Partial<TestEvidence> = {}): TestEvidence {
     classification: 'pain',
     isDirect: false,
     relationship: 'supports',
+    provenanceState: 'exact',
     ...overrides,
   };
 }
@@ -38,6 +39,12 @@ describe('hypothesis scoring semantics', () => {
       neutralCount: 1,
       status: 'unvalidated',
     });
+  });
+
+  it('treats missing provenance as unverified for directness scoring', () => {
+    const result = calculateScore([signal({ isDirect: true, provenanceState: undefined })]);
+    expect(result.supportCoverage.directEvidenceCount).toBe(0);
+    expect(result.supportScore).toBe(15);
   });
 
   it('classifies a single support signal as weak evidence', () => {

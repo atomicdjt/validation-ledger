@@ -131,7 +131,7 @@ export function Dashboard() {
                 const unresolvedReasons = [
                   analysis.uniqueSourcesCount < 3 ? `Only ${analysis.uniqueSourcesCount} independent source${analysis.uniqueSourcesCount === 1 ? '' : 's'}` : null,
                   !analysis.evidenceQuality.hasBehavioralEvidence ? 'No behavioral or pricing evidence' : null,
-                  analysis.contradictingCount > 0 ? `${analysis.contradictingCount} contradicting signal${analysis.contradictingCount === 1 ? '' : 's'}` : null,
+                  analysis.uniqueContradictingSourcesCount > 0 ? `${analysis.uniqueContradictingSourcesCount} contradicting source${analysis.uniqueContradictingSourcesCount === 1 ? '' : 's'}` : null,
                 ].filter(Boolean);
 
                 return (
@@ -143,7 +143,7 @@ export function Dashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold leading-6 text-surface-900">{gap.statement}</p>
-                      <p className="mt-1 text-xs font-medium text-surface-400">Confidence {analysis.score}/100</p>
+                      <p className="mt-1 text-xs font-medium text-surface-400">Support score {analysis.score}/100</p>
                     </div>
                     <ul className="space-y-1 text-xs leading-5 text-surface-600">
                       {unresolvedReasons.map((reason) => (
@@ -179,12 +179,14 @@ export function Dashboard() {
                 <div className="p-5">
                   <p className="font-semibold leading-6 text-surface-900">{mostContradicted.statement}</p>
                   <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border border-surface-200 text-sm font-semibold">
-                    <div className="px-3 py-2.5 text-emerald-700">{analyses[mostContradicted.id].supportingCount} Supporting</div>
-                    <div className="border-l border-surface-200 px-3 py-2.5 text-red-700">{analyses[mostContradicted.id].contradictingCount} Contradicting</div>
+                    <div className="px-3 py-2.5 text-emerald-700">{analyses[mostContradicted.id].uniqueSupportingSourcesCount} Supporting source{analyses[mostContradicted.id].uniqueSupportingSourcesCount === 1 ? '' : 's'}</div>
+                    <div className="border-l border-surface-200 px-3 py-2.5 text-red-700">{analyses[mostContradicted.id].uniqueContradictingSourcesCount} Contradicting source{analyses[mostContradicted.id].uniqueContradictingSourcesCount === 1 ? '' : 's'}</div>
                   </div>
                   {contradictionSignal ? (
                     <blockquote className="mt-4 border-l-2 border-red-300 pl-4 text-sm leading-6 text-surface-600">
-                      “{contradictionSignal.exactExcerpt || contradictionSignal.statement}”
+                      {contradictionSignal.provenanceState === 'exact' || contradictionSignal.provenanceState === 'normalized'
+                        ? `“${contradictionSignal.exactExcerpt}”`
+                        : 'Inference only — no verified source quote is available.'}
                     </blockquote>
                   ) : null}
                 </div>

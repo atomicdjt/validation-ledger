@@ -107,7 +107,8 @@ export async function injectDemoData() {
       isDirect: true,
       confidence: 5,
       notes: '',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      provenanceState: 'exact'
     },
     {
       id: generateId(),
@@ -122,7 +123,8 @@ export async function injectDemoData() {
       isDirect: true,
       confidence: 5,
       notes: '',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      provenanceState: 'unverified'
     },
     {
       id: generateId(),
@@ -137,7 +139,8 @@ export async function injectDemoData() {
       isDirect: true,
       confidence: 5,
       notes: '',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      provenanceState: 'exact'
     }
   ]);
 

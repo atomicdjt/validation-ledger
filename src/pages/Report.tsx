@@ -6,6 +6,11 @@ import { Printer } from 'lucide-react';
 import { calculateScore, HypothesisAnalysis } from '../services/scoring';
 import { EvidenceMatrix } from '../components/EvidenceMatrix';
 
+function EvidenceExcerpt({ excerpt, provenanceState }: { excerpt: string; provenanceState: 'exact' | 'normalized' | 'unverified' }) {
+  if (provenanceState === 'unverified') return <p className="text-sm leading-6 text-surface-600">Inference only — no verified source quote is available.</p>;
+  return <p className="font-medium text-surface-900 mb-1">“{excerpt}” <span className="ml-1 text-xs font-semibold uppercase tracking-wide text-surface-500">{provenanceState} match</span></p>;
+}
+
 export function Report() {
   const activeProjectId = useStore(state => state.activeProjectId);
   const project = useLiveQuery(() => activeProjectId ? db.projects.get(activeProjectId) : undefined, [activeProjectId]);
@@ -79,7 +84,7 @@ export function Report() {
                 <div key={h.id} className="p-4 bg-green-50/50 border border-green-100 rounded-lg">
                   <h3 className="font-semibold text-surface-900">{h.statement}</h3>
                   <div className="mt-2 text-sm text-surface-700">
-                    Score: {analyses[h.id]?.score}/100 • Supported by {analyses[h.id]?.supportingCount} sources
+                    Support score: {analyses[h.id]?.score}/100 • {analyses[h.id]?.uniqueSupportingSourcesCount} independent supporting source{analyses[h.id]?.uniqueSupportingSourcesCount === 1 ? '' : 's'}
                   </div>
                 </div>
               ))}
@@ -97,7 +102,7 @@ export function Report() {
                 <div key={h.id} className="p-4 bg-red-50/50 border border-red-100 rounded-lg">
                   <h3 className="font-semibold text-surface-900">{h.statement}</h3>
                   <div className="mt-2 text-sm text-surface-700">
-                    Contradicted by {analyses[h.id]?.contradictingCount} sources
+                    {analyses[h.id]?.uniqueContradictingSourcesCount} independent contradicting source{analyses[h.id]?.uniqueContradictingSourcesCount === 1 ? '' : 's'}
                   </div>
                 </div>
               ))}
@@ -118,7 +123,7 @@ export function Report() {
             <div className="grid gap-4 md:grid-cols-2">
               {pricingEvidence.map(e => (
                 <div key={e.id} className="p-4 border border-surface-200 rounded-lg text-sm">
-                  <p className="font-medium text-surface-900 mb-1">"{e.exactExcerpt}"</p>
+                  <EvidenceExcerpt excerpt={e.exactExcerpt} provenanceState={e.provenanceState ?? 'unverified'} />
                   <p className="text-surface-500">— Participant from {sources?.find(s => s.id === e.sourceId)?.type}</p>
                 </div>
               ))}
@@ -136,7 +141,7 @@ export function Report() {
                 <div key={d.id}>
                   <h3 className="font-semibold text-surface-900 mb-1">{d.title}</h3>
                   <p className="text-sm text-surface-700">{d.reason}</p>
-                  <div className="text-xs text-surface-500 mt-1 uppercase tracking-wider">{d.confidence} Confidence</div>
+                  <div className="text-xs text-surface-500 mt-1 uppercase tracking-wider">Decision confidence: {d.confidence}</div>
                 </div>
               ))}
             </div>
@@ -152,7 +157,7 @@ export function Report() {
               {weak.map(h => (
                 <li key={h.id}>
                   <span className="font-medium">{h.statement}</span>
-                  <div className="text-sm text-surface-500 mt-0.5">Needs more evidence ({analyses[h.id]?.score}/100)</div>
+                  <div className="text-sm text-surface-500 mt-0.5">Needs more evidence (support score {analyses[h.id]?.score}/100)</div>
                 </li>
               ))}
             </ul>
