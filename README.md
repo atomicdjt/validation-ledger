@@ -11,7 +11,7 @@ Validation Ledger is a polished, local-first research workspace for capturing cu
 Product managers, UX researchers, and founders who need to synthesize user interviews and qualitative feedback into robust, evidence-backed product decisions rather than relying on gut feeling.
 
 ### Why is it interesting?
-It replaces black-box AI summaries and scattered notes with a transparent reasoning chain (`Source → Evidence signal → Hypothesis → Decision`). It features an explainable support scoring model, completely local-first privacy (via IndexedDB), and optional AI assistance.
+It replaces black-box AI summaries and scattered notes with a transparent reasoning chain (`Source → Evidence signal → Hypothesis → Decision`). It features an explainable support scoring model, local-first core data storage via IndexedDB, and optional AI assistance (where Gemini requests occur only when explicitly initiated by the user).
 
 ### Can I see it?
 Yes! **[Live Production Demo](https://validation-ledger.vercel.app)**
