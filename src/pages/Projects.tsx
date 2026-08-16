@@ -133,7 +133,7 @@ export function Projects() {
                   <span className="min-w-0">
                     <span className="block truncate text-base font-bold text-surface-950">{project.name}</span>
                     <span className="mt-2 line-clamp-2 block text-sm leading-6 text-surface-500">{project.productDescription || 'No product description yet.'}</span>
-                    <span className="mt-4 block text-xs font-medium text-surface-400">Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                    <span className="mt-4 block text-xs font-medium text-surface-500">Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
                   </span>
                 </div>
               </button>

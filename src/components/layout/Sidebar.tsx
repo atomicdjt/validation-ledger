@@ -95,7 +95,7 @@ export function Sidebar() {
             <Settings size={19} strokeWidth={1.8} />
             Settings
           </NavLink>
-          <p className="px-3 pt-4 text-[11px] text-slate-500">Local-first · stored in this browser</p>
+          <p className="px-3 pt-4 text-[11px] text-slate-400">Local-first · stored in this browser</p>
         </div>
       </aside>
     </>
