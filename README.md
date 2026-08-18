@@ -4,31 +4,30 @@
 
 **Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
-[Live demo](https://validation-ledger.vercel.app) · [Architecture](docs/ARCHITECTURE.md) · [Release validation](docs/VALIDATION.md) · [Security](SECURITY.md) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
+### What is this?
+Validation Ledger is a polished, local-first research workspace for capturing customer evidence, testing product hypotheses, and recording decisions without losing the source material behind them.
+
+### Who is it for?
+Product managers, UX researchers, and founders who need to synthesize user interviews and qualitative feedback into robust, evidence-backed product decisions rather than relying on gut feeling.
+
+### Why is it interesting?
+It replaces black-box AI summaries and scattered notes with a transparent reasoning chain (`Source → Evidence signal → Hypothesis → Decision`). It features an explainable support scoring model, local-first core data storage via IndexedDB, and optional AI assistance (where Gemini requests occur only when explicitly initiated by the user).
+
+### Can I see it?
+Yes! **[Live Production Demo](https://validation-ledger.vercel.app)**
+*(Technical deep-dives: [Architecture](docs/ARCHITECTURE.md) · [Release validation](docs/VALIDATION.md) · [Security](SECURITY.md) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/))*
+
+### Where is the evidence?
+The app computes an explicit support strength score based on:
+- Independent supporting sources
+- Segment diversity
+- Behavioral or willingness-to-pay evidence
+- Direct verbatim source citations
+Contradicting evidence is weighed separately, preventing positive bias from erasing material counterevidence.
 
 ![Validation Ledger dashboard](docs/images/dashboard.png)
 
 **More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt)
-
-Validation Ledger is a polished, local-first research workspace for capturing customer evidence, testing product hypotheses, and recording decisions without losing the source material behind them.
-
-```text
-Source → Evidence signal → Hypothesis → Decision
-```
-
-## Why it exists
-
-Product discovery often decays into scattered notes and conclusions based on repetition rather than evidence. Validation Ledger keeps the full reasoning chain inspectable: verified excerpts remain attached to sources, supporting and contradicting evidence stay distinct, and hypothesis support strength is calculated with a deterministic, explainable model.
-
-## Highlights
-
-- **Traceable evidence:** connect exact source excerpts to hypotheses as supporting, contradicting, or neutral signals.
-- **Explainable support strength:** score independent sources, segment diversity, behavioral evidence, verified citations, and contradictions without a black box.
-- **Decision history:** record what was decided, why, and which evidence informed the call.
-- **Local-first privacy:** research records remain in the browser through IndexedDB; there is no application backend or cloud database.
-- **Integrity-checked backups:** export versioned JSON and atomically restore only after complete schema, size, duplicate-ID, and relationship validation succeeds.
-- **Optional AI assistance:** generate untrusted structured suggestions with Google Gemini, verify quoted provenance, and require explicit human acceptance before saving.
-- **Responsive workflow:** polished desktop navigation and purpose-built mobile layouts.
 
 ## Product tour
 

@@ -23,7 +23,7 @@ export function Header() {
           <BookCheck size={18} />
         </span>
         <button type="button" onClick={() => navigate('/projects')} className="min-w-0 rounded-lg text-left">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 lg:text-[11px] lg:text-surface-400">Project</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 lg:text-[11px] lg:text-surface-500">Project</span>
           <span className="mt-0.5 flex items-center gap-1.5 truncate text-sm font-semibold text-white sm:text-[15px] lg:text-surface-900">
             {activeProject?.name || 'Select a project'}
             <ChevronDown size={15} className="text-slate-400 lg:text-surface-400" />
