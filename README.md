@@ -99,4 +99,4 @@ Only excerpts that match the saved source exactly or through conservative whites
 
 ## License
 
-Copyright © 2026 atomicdjt. All rights reserved. The repository is public for portfolio review; no license to redistribute or create derivative works is granted unless provided separately in writing.
+Validation Ledger is open source under the [MIT License](LICENSE). Copyright © 2026 atomicdjt.
