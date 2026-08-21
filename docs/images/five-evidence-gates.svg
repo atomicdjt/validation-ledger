@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1448" height="1086" viewBox="0 0 1448 1086" role="img" aria-labelledby="title desc">
+  <title id="title">Five Evidence Gates</title>
+  <desc id="desc">A technical diagram showing five evidence gates—Implementation, Automated Verification, Runtime Verification, Production Verification, and Human Verification—feeding into Ready, while blocking counterevidence can veto readiness. Unknown is not Pass.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#06111c"/><stop offset="0.55" stop-color="#07101a"/><stop offset="1" stop-color="#03070d"/></linearGradient>
+    <linearGradient id="greenPanel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#082319" stop-opacity="0.78"/><stop offset="1" stop-color="#06140f" stop-opacity="0.92"/></linearGradient>
+    <linearGradient id="readyPanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#083a2b"/><stop offset="1" stop-color="#071b15"/></linearGradient>
+    <linearGradient id="redPanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a0c0a"/><stop offset="1" stop-color="#130707"/></linearGradient>
+    <linearGradient id="bluePanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1e35"/><stop offset="1" stop-color="#07111e"/></linearGradient>
+    <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#2a6f9a" opacity="0.13"/></pattern>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#71f7a5"/></marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ff604f"/></marker>
+  </defs>
+
+  <rect width="1448" height="1086" fill="url(#bg)"/>
+  <rect width="1448" height="1086" fill="url(#dots)"/>
+  <path d="M0 78 H42 L82 38 H150" fill="none" stroke="#2d9bc6" stroke-opacity="0.38" stroke-width="2"/>
+  <circle cx="175" cy="38" r="4" fill="#4ec9ff" filter="url(#glowGreen)"/>
+  <path d="M1448 78 H1406 L1366 38 H1298" fill="none" stroke="#2d9bc6" stroke-opacity="0.38" stroke-width="2"/>
+  <circle cx="1273" cy="38" r="4" fill="#4ec9ff" filter="url(#glowGreen)"/>
+
+  <text x="724" y="83" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="72" font-weight="800" letter-spacing="-2" fill="#f8fbff">Five Evidence Gates</text>
+  <text x="724" y="127" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="500" fill="#c7d6e3">How completion claims should be validated in AI-assisted software work</text>
+
+  <g stroke="#71f7a5" stroke-width="4" fill="none" opacity="0.95" marker-end="url(#arrowGreen)">
+    <path d="M250 347 H292"/><path d="M530 347 H572"/><path d="M810 347 H852"/><path d="M1090 347 H1132"/>
+  </g>
+
+  <g transform="translate(30,170)">
+    <rect width="220" height="365" rx="22" fill="url(#greenPanel)" stroke="#83f6a9" stroke-width="2.5"/>
+    <circle cx="110" cy="0" r="28" fill="#0b4d2a" stroke="#8affb0" stroke-width="2.5"/><text x="110" y="10" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff">1</text>
+    <circle cx="110" cy="95" r="47" fill="none" stroke="#75f39f" stroke-width="4"/>
+    <path d="M94 80 L76 95 L94 110 M126 80 L144 95 L126 110 M116 71 L104 119" fill="none" stroke="#75f39f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="110" y="166" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="23" font-weight="800" fill="#fff">Implementation</text>
+    <line x1="75" y1="188" x2="145" y2="188" stroke="#48e787" stroke-width="2"/>
+    <text x="110" y="228" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="19" fill="#e8f0f4"><tspan x="110">The requested</tspan><tspan x="110" dy="26">change exists in</tspan><tspan x="110" dy="26">the codebase</tspan></text>
+    <circle cx="110" cy="337" r="25" fill="#239653" stroke="#8affb0" stroke-width="2"/><path d="M98 337 L107 346 L124 326" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(310,170)">
+    <rect width="220" height="365" rx="22" fill="url(#greenPanel)" stroke="#83f6a9" stroke-width="2.5"/>
+    <circle cx="110" cy="0" r="28" fill="#0b4d2a" stroke="#8affb0" stroke-width="2.5"/><text x="110" y="10" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff">2</text>
+    <rect x="74" y="51" width="72" height="90" rx="8" fill="none" stroke="#75f39f" stroke-width="4"/><path d="M88 74 l8 8 15 -17 M88 99 l8 8 15 -17 M88 124 l8 8 15 -17" fill="none" stroke="#75f39f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="116" y1="79" x2="135" y2="79" stroke="#75f39f" stroke-width="4"/><line x1="116" y1="104" x2="135" y2="104" stroke="#75f39f" stroke-width="4"/><line x1="116" y1="129" x2="135" y2="129" stroke="#75f39f" stroke-width="4"/>
+    <text x="110" y="166" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="800" fill="#fff"><tspan x="110">Automated</tspan><tspan x="110" dy="26">Verification</tspan></text>
+    <line x1="75" y1="214" x2="145" y2="214" stroke="#48e787" stroke-width="2"/>
+    <text x="110" y="247" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" fill="#e8f0f4"><tspan x="110">Tests, type checks,</tspan><tspan x="110" dy="23">linting, and machine-</tspan><tspan x="110" dy="23">checkable rules</tspan><tspan x="110" dy="23">passed</tspan></text>
+    <circle cx="110" cy="337" r="25" fill="#239653" stroke="#8affb0" stroke-width="2"/><path d="M98 337 L107 346 L124 326" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(590,170)">
+    <rect width="220" height="365" rx="22" fill="url(#greenPanel)" stroke="#83f6a9" stroke-width="2.5"/>
+    <circle cx="110" cy="0" r="28" fill="#0b4d2a" stroke="#8affb0" stroke-width="2.5"/><text x="110" y="10" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff">3</text>
+    <rect x="63" y="58" width="94" height="67" rx="7" fill="none" stroke="#75f39f" stroke-width="4"/><path d="M77 96 H91 L99 82 L108 109 L119 73 L128 96 H145" fill="none" stroke="#75f39f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="110" y1="125" x2="110" y2="141" stroke="#75f39f" stroke-width="4"/><line x1="88" y1="141" x2="132" y2="141" stroke="#75f39f" stroke-width="4"/>
+    <text x="110" y="166" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="800" fill="#fff"><tspan x="110">Runtime</tspan><tspan x="110" dy="26">Verification</tspan></text>
+    <line x1="75" y1="214" x2="145" y2="214" stroke="#48e787" stroke-width="2"/>
+    <text x="110" y="251" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#e8f0f4"><tspan x="110">The behavior was</tspan><tspan x="110" dy="25">observed in a</tspan><tspan x="110" dy="25">running system</tspan></text>
+    <circle cx="110" cy="337" r="25" fill="#239653" stroke="#8affb0" stroke-width="2"/><path d="M98 337 L107 346 L124 326" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(870,170)">
+    <rect width="220" height="365" rx="22" fill="url(#greenPanel)" stroke="#83f6a9" stroke-width="2.5"/>
+    <circle cx="110" cy="0" r="28" fill="#0b4d2a" stroke="#8affb0" stroke-width="2.5"/><text x="110" y="10" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff">4</text>
+    <circle cx="110" cy="95" r="46" fill="none" stroke="#75f39f" stroke-width="4"/><ellipse cx="110" cy="95" rx="22" ry="46" fill="none" stroke="#75f39f" stroke-width="3"/><line x1="64" y1="95" x2="156" y2="95" stroke="#75f39f" stroke-width="3"/><path d="M71 75 Q110 91 149 75 M71 115 Q110 99 149 115" fill="none" stroke="#75f39f" stroke-width="3"/>
+    <text x="110" y="166" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="800" fill="#fff"><tspan x="110">Production</tspan><tspan x="110" dy="26">Verification</tspan></text>
+    <line x1="75" y1="214" x2="145" y2="214" stroke="#48e787" stroke-width="2"/>
+    <text x="110" y="249" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17.5" fill="#e8f0f4"><tspan x="110">The version users</tspan><tspan x="110" dy="24">can actually reach</tspan><tspan x="110" dy="24">was verified</tspan></text>
+    <circle cx="110" cy="337" r="25" fill="#239653" stroke="#8affb0" stroke-width="2"/><path d="M98 337 L107 346 L124 326" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g transform="translate(1150,170)">
+    <rect width="220" height="365" rx="22" fill="url(#greenPanel)" stroke="#83f6a9" stroke-width="2.5"/>
+    <circle cx="110" cy="0" r="28" fill="#0b4d2a" stroke="#8affb0" stroke-width="2.5"/><text x="110" y="10" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff">5</text>
+    <circle cx="110" cy="95" r="46" fill="none" stroke="#75f39f" stroke-width="4"/><circle cx="110" cy="80" r="15" fill="none" stroke="#75f39f" stroke-width="4"/><path d="M82 126 Q87 101 110 101 Q133 101 138 126" fill="none" stroke="#75f39f" stroke-width="4" stroke-linecap="round"/>
+    <text x="110" y="166" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" font-weight="800" fill="#fff"><tspan x="110">Human</tspan><tspan x="110" dy="26">Verification</tspan></text>
+    <line x1="75" y1="214" x2="145" y2="214" stroke="#48e787" stroke-width="2"/>
+    <text x="110" y="249" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17.5" fill="#e8f0f4"><tspan x="110">A required human</tspan><tspan x="110" dy="24">review or judgment</tspan><tspan x="110" dy="24">was completed</tspan></text>
+    <circle cx="110" cy="337" r="25" fill="#239653" stroke="#8affb0" stroke-width="2"/><path d="M98 337 L107 346 L124 326" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g stroke="#71f7a5" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.92">
+    <path d="M140 507 V568 H700"/><path d="M420 507 V568"/><path d="M700 507 V606" marker-end="url(#arrowGreen)"/><path d="M980 507 V568"/><path d="M1260 507 V568 H700"/>
+  </g>
+
+  <g>
+    <rect x="500" y="610" width="430" height="176" rx="24" fill="url(#readyPanel)" stroke="#50f39a" stroke-width="3" filter="url(#glowGreen)"/>
+    <circle cx="566" cy="698" r="46" fill="#0c3c2a" stroke="#91ffc0" stroke-width="3"/>
+    <path d="M566 659 L596 672 V696 C596 718 583 735 566 745 C549 735 536 718 536 696 V672 Z" fill="none" stroke="#f2fff7" stroke-width="5"/><path d="M551 698 L563 710 L584 684" fill="none" stroke="#f2fff7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="734" y="706" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="66" font-weight="900" fill="#fff">READY</text>
+    <line x1="650" y1="726" x2="858" y2="726" stroke="#4ff59a" stroke-width="2"/>
+    <text x="754" y="758" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="600" fill="#8ef7b4">All required gates satisfied</text>
+  </g>
+
+  <g>
+    <rect x="1000" y="620" width="378" height="164" rx="18" fill="#11130b" fill-opacity="0.88" stroke="#f2ce3d" stroke-width="2.5" stroke-dasharray="9 8"/>
+    <circle cx="1060" cy="674" r="36" fill="#1f1c08" stroke="#f6d64b" stroke-width="2"/>
+    <path d="M1060 646 V700 M1039 660 H1081 M1045 660 L1032 686 H1058 Z M1075 660 L1062 686 H1088 Z" fill="none" stroke="#f6d64b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1116" y="666" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="31" font-weight="900" fill="#f6d64b">RULE</text>
+    <text x="1116" y="704" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#f5f5f1"><tspan x="1116">READY = every required</tspan><tspan x="1116" dy="25">gate is satisfied AND no</tspan><tspan x="1116" dy="25">blocking counterevidence</tspan><tspan x="1116" dy="25">remains unresolved</tspan></text>
+  </g>
+
+  <g>
+    <rect x="24" y="748" width="416" height="164" rx="18" fill="url(#redPanel)" stroke="#ff5a48" stroke-width="2.5" filter="url(#glowRed)"/>
+    <circle cx="90" cy="810" r="40" fill="#30100c" stroke="#ff8a70" stroke-width="2.5"/>
+    <path d="M90 777 L120 833 H60 Z" fill="none" stroke="#ff8a70" stroke-width="4" stroke-linejoin="round"/><line x1="90" y1="794" x2="90" y2="814" stroke="#ff8a70" stroke-width="5" stroke-linecap="round"/><circle cx="90" cy="824" r="3" fill="#ff8a70"/>
+    <text x="150" y="797" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="900" fill="#fff">Counterevidence</text>
+    <text x="150" y="835" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" fill="#f4e9e6"><tspan x="150">Blocking defects, failed checks,</tspan><tspan x="150" dy="25">unresolved review, contradictory</tspan><tspan x="150" dy="25">findings</tspan></text>
+  </g>
+
+  <path d="M440 848 H708 V790" fill="none" stroke="#ff604f" stroke-width="7" stroke-linecap="round" marker-end="url(#arrowRed)" filter="url(#glowRed)"/>
+  <circle cx="708" cy="848" r="31" fill="#6d1510" stroke="#ff6a59" stroke-width="3"/><path d="M696 836 L720 860 M720 836 L696 860" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+  <rect x="742" y="823" width="466" height="50" rx="12" fill="#2a0908" stroke="#ff604f" stroke-width="2"/>
+  <text x="975" y="856" text-anchor="middle" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="23" font-weight="900" fill="#ff6b59">VETO: Counterevidence overrides READY</text>
+  <path d="M1208 848 H1384" stroke="#ff604f" stroke-width="4" stroke-dasharray="12 10"/>
+
+  <g>
+    <rect x="344" y="942" width="760" height="104" rx="18" fill="url(#bluePanel)" stroke="#39a7ff" stroke-width="2"/>
+    <circle cx="410" cy="994" r="34" fill="#123a62" stroke="#4cb3ff" stroke-width="2.5"/>
+    <text x="410" y="1006" text-anchor="middle" font-family="Georgia,serif" font-size="38" font-weight="700" fill="#fff">i</text>
+    <text x="470" y="986" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="28" font-weight="850" fill="#d9edff">Unknown is not Pass</text>
+    <text x="470" y="1019" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" fill="#f0f6fa">Absence of failure is not evidence of success.</text>
+  </g>
+</svg>
