@@ -1,33 +1,29 @@
 # Validation Ledger
 
-**Turn customer conversations into traceable product decisions.**
+**Turn customer conversations into traceable product decisions—without letting summaries erase the evidence.**
 
-**Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
+**[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
-### What is this?
-Validation Ledger is a polished, local-first research workspace for capturing customer evidence, testing product hypotheses, and recording decisions without losing the source material behind them.
+```text
+SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION
+                     ↘ COUNTEREVIDENCE
+```
 
-### Who is it for?
-Product managers, UX researchers, and founders who need to synthesize user interviews and qualitative feedback into robust, evidence-backed product decisions rather than relying on gut feeling.
+Validation Ledger is an MIT-licensed, local-first product-discovery workspace for product managers, UX researchers, and founders who need to preserve the chain from raw customer material to an explicit decision.
 
-### Why is it interesting?
-It replaces black-box AI summaries and scattered notes with a transparent reasoning chain (`Source → Evidence signal → Hypothesis → Decision`). It features an explainable support scoring model, local-first core data storage via IndexedDB, and optional AI assistance (where Gemini requests occur only when explicitly initiated by the user).
+### Why it is different
 
-### Can I see it?
-Yes! **[Live Production Demo](https://validation-ledger.vercel.app)**
-*(Technical deep-dives: [Architecture](docs/ARCHITECTURE.md) · [Release validation](docs/VALIDATION.md) · [Security](SECURITY.md) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/))*
-
-### Where is the evidence?
-The app computes an explicit support strength score based on:
-- Independent supporting sources
-- Segment diversity
-- Behavioral or willingness-to-pay evidence
-- Direct verbatim source citations
-Contradicting evidence is weighed separately, preventing positive bias from erasing material counterevidence.
+- **Evidence stays traceable.** Quotes and evidence signals remain linked to the source material behind them.
+- **Counterevidence stays visible.** Contradictory evidence is scored separately instead of disappearing inside an optimistic summary.
+- **The core product is local-first.** Project data lives in IndexedDB in the current browser profile; there is no required application backend.
+- **AI is optional, not authoritative.** Gemini extraction only runs when the user explicitly initiates it, and suggested evidence still requires human review.
+- **The scoring model is inspectable.** Support strength is derived from explicit factors rather than a hidden model judgment.
 
 ![Validation Ledger dashboard](docs/images/dashboard.png)
 
-**More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt)
+> **Feedback wanted:** where does this evidence model create false confidence, miss an important kind of discovery signal, or handle contradiction poorly? If the approach is useful, starring the repository helps other product teams discover it.
+
+**Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
 ## Product tour
 
@@ -36,6 +32,19 @@ The workspace includes project and hypothesis management, a source library, sour
 <p align="center">
   <img src="docs/images/source-mobile.png" alt="Validation Ledger source detail on mobile" width="380" />
 </p>
+
+## Who it is for
+
+Validation Ledger is designed for people who need to synthesize qualitative customer evidence into defensible product decisions rather than relying on gut feeling, disconnected notes, or opaque AI summaries.
+
+Typical workflows include:
+
+- customer-interview synthesis;
+- hypothesis tracking;
+- product-discovery evidence review;
+- explicit decision records;
+- preservation of contradictory signals;
+- research handoff and auditability.
 
 ## Technology
 
@@ -90,12 +99,20 @@ Counterevidence receives its own independently capped score. Credible support pl
 
 Only excerpts that match the saved source exactly or through conservative whitespace/quotation normalization may be treated as direct evidence. Missing or unverified provenance is displayed as an inference, never as a quote. The score is an aid to judgment, not proof of market demand. AI-generated suggestions also require human review.
 
-## Documentation
+## Evidence and boundaries
+
+The technical evidence for the project is documented rather than implied:
 
 - [Architecture and system boundaries](docs/ARCHITECTURE.md)
 - [Release checks and current limitations](docs/VALIDATION.md)
 - [Security and responsible key handling](SECURITY.md)
 - [Contribution workflow](CONTRIBUTING.md)
+
+The scoring system is intentionally heuristic. It structures judgment; it does not prove product-market fit, causal demand, source truthfulness, or research quality.
+
+## More projects
+
+[BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
 
 ## License
 
