@@ -9,6 +9,10 @@ SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION
                      ↘ COUNTEREVIDENCE
 ```
 
+![Validation Ledger evidence flow](docs/images/validation-ledger-evidence-flow.gif)
+
+*Animated conceptual tour of the documented evidence model; this is not a fabricated live screen recording.*
+
 Validation Ledger is an MIT-licensed, local-first product-discovery workspace for product managers, UX researchers, and founders who need to preserve the chain from raw customer material to an explicit decision.
 
 ### Why it is different
