@@ -73,11 +73,11 @@ export function getAnalyticsConfig(apiHost: string) {
       // Keep only the typed product properties plus this control flag and the
       // SDK fields required for ingestion; never forward browser/page context.
       const allowed = new Set(['$geoip_disable', '$lib', '$lib_version', 'token', 'entry_point', 'project_stage', 'source_type', 'has_content', 'importance', 'confidence', 'linked_evidence_count', 'linked_hypothesis_count']);
-      data.properties = Object.fromEntries(
+      const properties = Object.fromEntries(
         Object.entries(data.properties).filter(([name]) => allowed.has(name)),
       );
-      data.properties.$geoip_disable = true;
-      return data;
+      properties.$geoip_disable = true;
+      return { ...data, properties };
     },
   };
 }
