@@ -77,7 +77,7 @@ Open the local URL shown by Vite. No environment variable is required for the co
 
 Telemetry is off unless `VITE_POSTHOG_KEY` is configured at build time (and `VITE_POSTHOG_HOST` is optional). It records only these coarse completion events: application load; project, source, hypothesis, manual-evidence, and decision creation; source-note save; and backup export/import. Allowed properties are limited to type, enum, boolean, and link-count metadata.
 
-It never sends source notes, evidence or claim text, identifiers, URLs, backup content, local database state, API keys, or user identity. Automatic URL/referrer fields are blacklisted; PostHog autocapture, pageviews, session replay, and persistent analytics storage are disabled. Missing or failed telemetry configuration cannot affect core product behavior.
+It never sends source notes, evidence or claim text, user-provided identifiers, URLs, backup content, local database state, API keys, or user identity. Application events use finite structural values only. PostHog still receives the public project token in the transport request and may attach anonymous SDK identifiers and library/timestamp envelope fields required for ingestion; browser, device, URL/referrer, IP-derived location, and session-recording fields are disabled or blacklisted. Missing or failed telemetry configuration cannot affect core product behavior.
 
 To verify ingestion, add the PostHog public project key as `VITE_POSTHOG_KEY` in Vercel, redeploy, complete a single non-sensitive workflow, and inspect PostHog Live Events for an allowlisted event name. Add future events only through `src/services/analytics.ts` with a narrow typed property contract and a corresponding test.
 

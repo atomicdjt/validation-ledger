@@ -66,7 +66,7 @@ export function Projects() {
       updatedAt: Date.now(),
     };
     await db.projects.add(newProject);
-    analytics.track('project_created', { project_stage: newProject.stage });
+    analytics.track('project_created', { project_stage: 'idea' });
     setActiveProject(newProject.id);
     resetForm();
     navigate('/');
