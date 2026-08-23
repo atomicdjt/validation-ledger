@@ -12,6 +12,10 @@ type AnalyticsEventProperties = {
   backup_imported: Record<string, never>;
 };
 
+// A non-sensitive runtime marker used to distinguish a rebuilt privacy-safe
+// preview from an older cached deployment during acceptance testing.
+export const privacyTelemetryBuild = 'privacy-safe-v2';
+
 export type AnalyticsEvent = keyof AnalyticsEventProperties;
 type Capture = <Event extends AnalyticsEvent>(event: Event, properties: AnalyticsEventProperties[Event]) => void;
 
