@@ -20,6 +20,7 @@ import type { EvidenceSignal, Hypothesis } from '../db/models';
 import { acceptedSuggestionsToEvidence, EVIDENCE_CLASSIFICATIONS, prepareEvidenceSuggestions, verifyExcerptProvenance, type StagedEvidenceSuggestion } from '../services/evidenceIntegrity';
 import { addAcceptedEvidence, addManualEvidence, deleteEvidenceCascade, updateEvidenceWithCanonicalProvenance, updateSourceTextWithEvidenceRevalidation } from '../db/operations';
 import { updateAllHypothesisScores } from '../services/scoring';
+import { analytics } from '../services/analytics';
 
 type MobileTab = 'source' | 'evidence';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -157,6 +158,7 @@ export function SourceDetail() {
       setSaveState('saving');
       setError('');
       await updateSourceTextWithEvidenceRevalidation(id, rawText);
+      analytics.track('source_notes_saved', { has_content: rawText.trim().length > 0 });
       setSaveState('saved');
       window.setTimeout(() => setSaveState('idle'), 1800);
       return true;
@@ -170,6 +172,7 @@ export function SourceDetail() {
   const handleAddManualEvidence = async () => {
     if (!source) return;
     await addManualEvidence(source);
+    analytics.track('manual_evidence_created', { source_type: source.type });
     setMobileTab('evidence');
   };
 

@@ -6,6 +6,7 @@ import type { Hypothesis } from '../db/models';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
 import { deleteHypothesisCascade } from '../db/operations';
+import { analytics } from '../services/analytics';
 
 export function Hypotheses() {
   const activeProjectId = useStore((state) => state.activeProjectId);
@@ -63,6 +64,7 @@ export function Hypotheses() {
         confidenceScore: 0,
         createdAt: Date.now(),
       });
+      analytics.track('hypothesis_created', { importance });
     }
     resetForm();
   };

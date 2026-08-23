@@ -7,6 +7,7 @@ import type { Source } from '../db/models';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
 import { deleteSourceCascade } from '../db/operations';
+import { analytics } from '../services/analytics';
 
 export function Sources() {
   const activeProjectId = useStore((state) => state.activeProjectId);
@@ -48,6 +49,7 @@ export function Sources() {
       tags: [],
     };
     await db.sources.add(newSource);
+    analytics.track('source_created', { source_type: newSource.type });
     navigate(`/sources/${newSource.id}`);
   };
 
