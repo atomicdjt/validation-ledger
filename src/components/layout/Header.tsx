@@ -32,9 +32,9 @@ export function Header() {
       </div>
 
       {activeProjectId ? (
-        <button type="button" onClick={() => navigate('/sources')} className="button-primary hidden px-3 sm:px-4 lg:inline-flex">
+        <button type="button" onClick={() => navigate('/sources')} className="button-primary size-11 shrink-0 p-0 sm:h-11 sm:w-auto sm:px-4" aria-label="Add Evidence" title="Add Evidence">
           <Plus size={17} />
-          <span>Add Evidence</span>
+          <span className="hidden sm:inline">Add Evidence</span>
         </button>
       ) : null}
     </header>

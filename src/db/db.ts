@@ -59,6 +59,24 @@ export class ValidationLedgerDatabase extends Dexie {
         hypothesis.status = legacyStatuses[String(hypothesis.status)] ?? hypothesis.status ?? 'unvalidated';
       });
     });
+    this.version(3).stores({
+      projects: 'id, createdAt, updatedAt',
+      segments: 'id, projectId, priority',
+      sources: 'id, projectId, segmentId, date, type',
+      evidenceSignals: 'id, projectId, sourceId, segmentId, hypothesisId, classification, confidence',
+      hypotheses: 'id, projectId, category, importance, status, confidenceScore',
+      decisions: 'id, projectId, createdAt, status',
+      evidenceDecisionLinks: 'id, projectId, evidenceId, decisionId',
+      hypothesisDecisionLinks: 'id, projectId, hypothesisId, decisionId'
+    }).upgrade(async (transaction) => {
+      await transaction.table('decisions').toCollection().modify((decision: Record<string, unknown>) => {
+        decision.status = decision.status || 'accepted';
+        decision.alternatives = decision.alternatives || '';
+        decision.assumptions = decision.assumptions || '';
+        decision.validationMethod = decision.validationMethod || '';
+        decision.outcome = decision.outcome || '';
+      });
+    });
   }
 }
 

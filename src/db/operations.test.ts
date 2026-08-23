@@ -9,7 +9,7 @@ async function seed() {
   await db.sources.add({ id: 'src', projectId: 'p', participantId: 'A', segmentId: 'seg', date: 1, type: 'interview', rawText: '', metadata: {}, tags: [] });
   await db.hypotheses.add({ id: 'hyp', projectId: 'p', statement: 'H', category: '', importance: 'high', status: 'unvalidated', confidenceScore: 0, createdAt: 1 });
   await db.evidenceSignals.add({ id: 'ev', projectId: 'p', sourceId: 'src', segmentId: 'seg', hypothesisId: 'hyp', relationship: 'supports', classification: 'pain', statement: 'E', exactExcerpt: '', isDirect: false, confidence: 5, notes: '', createdAt: 1, provenanceState: 'unverified' });
-  await db.decisions.add({ id: 'dec', projectId: 'p', title: 'D', description: '', reason: '', confidence: 'low', createdAt: 1 });
+  await db.decisions.add({ id: 'dec', projectId: 'p', title: 'D', description: '', reason: '', confidence: 'low', status: 'accepted', alternatives: '', assumptions: '', validationMethod: '', outcome: '', createdAt: 1 });
   await db.evidenceDecisionLinks.add({ id: 'edl', projectId: 'p', evidenceId: 'ev', decisionId: 'dec' });
   await db.hypothesisDecisionLinks.add({ id: 'hdl', projectId: 'p', hypothesisId: 'hyp', decisionId: 'dec' });
 }

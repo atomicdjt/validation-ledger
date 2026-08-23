@@ -42,7 +42,7 @@ export function EvidenceMatrix() {
       <table className="w-full text-sm text-left">
         <thead className="bg-surface-50 text-surface-700 uppercase">
           <tr>
-            <th className="px-4 py-3 font-semibold border-b border-surface-200 w-1/3">Hypothesis</th>
+            <th className="px-4 py-3 font-semibold border-b border-surface-200 min-w-[200px]">Hypothesis</th>
             {segments.map(s => (
               <th key={s.id} className="px-4 py-3 font-semibold border-b border-surface-200 border-l border-surface-200 text-center">
                 {s.name}

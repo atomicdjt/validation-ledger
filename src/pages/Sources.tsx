@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useDeferredValue, useMemo, useState } from 'react';
+import { FormEvent, MouseEvent, useDeferredValue, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { CalendarDays, FileText, Plus, Search, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,8 @@ export function Sources() {
   const [participantId, setParticipantId] = useState('');
   const [type, setType] = useState<Source['type']>('interview');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   const visibleSources = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -37,20 +39,36 @@ export function Sources() {
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault();
     if (!activeProjectId) return;
-    const newSource: Source = {
-      id: generateId(),
-      projectId: activeProjectId,
-      participantId: participantId.trim() || 'Anonymous',
-      segmentId: null,
-      date: new Date(`${date}T12:00:00`).getTime(),
-      type,
-      rawText: '',
-      metadata: {},
-      tags: [],
-    };
-    await db.sources.add(newSource);
-    analytics.track('source_created', { source_type: newSource.type });
-    navigate(`/sources/${newSource.id}`);
+    const form = event.currentTarget as HTMLFormElement;
+    if (form.dataset.submitting === 'true' || isSubmitting || submissionLock.current) return;
+
+    form.dataset.submitting = 'true';
+    submissionLock.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
+    try {
+      const newSource: Source = {
+        id: generateId(),
+        projectId: activeProjectId,
+        participantId: participantId.trim() || 'Anonymous',
+        segmentId: null,
+        date: new Date(`${date}T12:00:00`).getTime(),
+        type,
+        rawText: '',
+        metadata: {},
+        tags: [],
+      };
+      await db.sources.add(newSource);
+      analytics.track('source_created', { source_type: newSource.type });
+      succeeded = true;
+      navigate(`/sources/${newSource.id}`);
+    } finally {
+      if (!succeeded) {
+        form.dataset.submitting = 'false';
+        submissionLock.current = false;
+      }
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (event: MouseEvent, id: string) => {
@@ -68,7 +86,7 @@ export function Sources() {
           <h1 className="page-title">Sources</h1>
           <p className="page-description">Interviews, emails, surveys, and customer observations—with provenance intact.</p>
         </div>
-        <button type="button" onClick={() => setIsCreating((value) => !value)} className={isCreating ? 'button-secondary' : 'button-primary'}>
+        <button type="button" onClick={() => { if (!isCreating) submissionLock.current = false; setIsCreating((value) => !value); }} className={isCreating ? 'button-secondary' : 'button-primary'}>
           {isCreating ? <X size={18} /> : <Plus size={18} />}
           {isCreating ? 'Cancel' : 'Add Source'}
         </button>
@@ -99,7 +117,7 @@ export function Sources() {
               <span className="field-label">Date</span>
               <input type="date" required value={date} onChange={(event) => setDate(event.target.value)} className="field-control" />
             </label>
-            <button type="submit" className="button-primary">Create & Continue</button>
+            <button type="submit" disabled={isSubmitting} className="button-primary w-full sm:w-auto">Create & Continue</button>
           </form>
         </section>
       ) : null}
@@ -139,8 +157,8 @@ export function Sources() {
         ) : (
           <div className="px-6 py-14 text-center">
             <FileText className="mx-auto text-surface-300" size={36} />
-            <p className="mt-3 font-semibold text-surface-800">{query ? 'No matching sources' : 'No sources yet'}</p>
-            <p className="mt-1 text-sm text-surface-500">{query ? 'Try a different participant, type, or tag.' : 'Add an interview, survey, or feedback note to begin.'}</p>
+            <p className="mt-3 font-semibold text-surface-800">{query ? 'No matching sources' : 'Your evidence trail starts here'}</p>
+            <p className="mt-1 text-sm text-surface-500">{query ? 'Try a different participant, type, or tag.' : 'Import your first interview, survey response, or support ticket to start building an auditable record of what customers actually said.'}</p>
           </div>
         )}
       </section>

@@ -64,7 +64,17 @@ export function Dashboard() {
   }, [activeProjectId, evidence]);
 
   if (!activeProjectId) {
-    return <div className="py-12 text-center text-surface-500">Please select a project first.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto px-4">
+        <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-primary-200">
+          <Activity size={32} />
+        </div>
+        <h1 className="text-2xl font-bold text-surface-900 mb-2">Welcome to Validation Ledger</h1>
+        <p className="text-surface-600 mb-8 leading-relaxed">
+          Validation Ledger is a local-first workspace for making important decisions traceable, evidence-based, and understandable. Select or create a project in the sidebar to begin tracking your reasoning.
+        </p>
+      </div>
+    );
   }
 
   const validationGaps = (hypotheses ?? [])

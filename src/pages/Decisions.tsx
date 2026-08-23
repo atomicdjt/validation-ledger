@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useStore } from '../store/useStore';
@@ -29,50 +29,83 @@ export function Decisions() {
   const [description, setDescription] = useState('');
   const [reason, setReason] = useState('');
   const [confidence, setConfidence] = useState<Decision['confidence']>('moderate');
+  const [status, setStatus] = useState<Decision['status']>('proposed');
+  const [alternatives, setAlternatives] = useState('');
+  const [assumptions, setAssumptions] = useState('');
+  const [validationMethod, setValidationMethod] = useState('');
+  const [outcome, setOutcome] = useState('');
   const [selectedHypotheses, setSelectedHypotheses] = useState<string[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !activeProjectId) return;
+    const form = e.currentTarget as HTMLFormElement;
+    if (form.dataset.submitting === 'true' || isSubmitting || submissionLock.current) return;
 
-    const newDecision: Decision = {
-      id: generateId(),
-      projectId: activeProjectId,
-      title: title.trim(),
-      description: description.trim(),
-      reason: reason.trim(),
-      confidence,
-      createdAt: Date.now(),
-    };
+    form.dataset.submitting = 'true';
+    submissionLock.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
+    try {
+      const newDecision: Decision = {
+        id: generateId(),
+        projectId: activeProjectId,
+        title: title.trim(),
+        description: description.trim(),
+        reason: reason.trim(),
+        confidence,
+        status,
+        alternatives: alternatives.trim(),
+        assumptions: assumptions.trim(),
+        validationMethod: validationMethod.trim(),
+        outcome: outcome.trim(),
+        createdAt: Date.now(),
+      };
 
-    await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
-      await db.decisions.add(newDecision);
-      for (const hId of selectedHypotheses) {
-        await db.hypothesisDecisionLinks.add({
-          id: generateId(),
-          projectId: activeProjectId,
-          hypothesisId: hId,
-          decisionId: newDecision.id
-        });
+      await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
+        await db.decisions.add(newDecision);
+        for (const hId of selectedHypotheses) {
+          await db.hypothesisDecisionLinks.add({
+            id: generateId(),
+            projectId: activeProjectId,
+            hypothesisId: hId,
+            decisionId: newDecision.id
+          });
+        }
+        for (const evidenceId of selectedEvidence) {
+          await db.evidenceDecisionLinks.add({ id: generateId(), projectId: activeProjectId, evidenceId, decisionId: newDecision.id });
+        }
+      });
+      succeeded = true;
+      analytics.track('decision_created', {
+        confidence,
+        linked_evidence_count: selectedEvidence.length,
+        linked_hypothesis_count: selectedHypotheses.length,
+      });
+      submissionLock.current = true;
+
+      setIsCreating(false);
+      setTitle('');
+      setDescription('');
+      setReason('');
+      setConfidence('moderate');
+      setStatus('proposed');
+      setAlternatives('');
+      setAssumptions('');
+      setValidationMethod('');
+      setOutcome('');
+      setSelectedHypotheses([]);
+      setSelectedEvidence([]);
+    } finally {
+      if (!succeeded) {
+        form.dataset.submitting = 'false';
+        submissionLock.current = false;
       }
-      for (const evidenceId of selectedEvidence) {
-        await db.evidenceDecisionLinks.add({ id: generateId(), projectId: activeProjectId, evidenceId, decisionId: newDecision.id });
-      }
-    });
-    analytics.track('decision_created', {
-      confidence,
-      linked_evidence_count: selectedEvidence.length,
-      linked_hypothesis_count: selectedHypotheses.length,
-    });
-
-    setIsCreating(false);
-    setTitle('');
-    setDescription('');
-    setReason('');
-    setConfidence('moderate');
-    setSelectedHypotheses([]);
-    setSelectedEvidence([]);
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -100,7 +133,7 @@ export function Decisions() {
           <p className="page-description">Record what changed, why it changed, and which assumptions informed the call.</p>
         </div>
         <button
-          onClick={() => setIsCreating(true)}
+          onClick={() => { if (!isCreating) submissionLock.current = false; setIsCreating(true); }}
           className="button-primary"
         >
           <Plus size={20} />
@@ -148,6 +181,81 @@ export function Decisions() {
             </div>
 
             <div>
+              <label htmlFor="decision-alternatives" className="block text-sm font-medium text-surface-700 mb-1">Alternatives Considered</label>
+              <textarea
+                id="decision-alternatives"
+                value={alternatives}
+                onChange={(e) => setAlternatives(e.target.value)}
+                className="field-control min-h-20 resize-y"
+                placeholder="What other options were considered and why were they rejected?"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="decision-assumptions" className="block text-sm font-medium text-surface-700 mb-1">Assumptions</label>
+              <textarea
+                id="decision-assumptions"
+                value={assumptions}
+                onChange={(e) => setAssumptions(e.target.value)}
+                className="field-control min-h-20 resize-y"
+                placeholder="What are you assuming to be true?"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="decision-validationMethod" className="block text-sm font-medium text-surface-700 mb-1">Validation Method</label>
+              <textarea
+                id="decision-validationMethod"
+                value={validationMethod}
+                onChange={(e) => setValidationMethod(e.target.value)}
+                className="field-control min-h-16 resize-y"
+                placeholder="How will you know if this decision was right?"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="decision-outcome" className="block text-sm font-medium text-surface-700 mb-1">Outcome</label>
+              <textarea
+                id="decision-outcome"
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value)}
+                className="field-control min-h-16 resize-y"
+                placeholder="What happened after this decision was made?"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="decision-status" className="block text-sm font-medium text-surface-700 mb-1">Status</label>
+                <select
+                  id="decision-status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as Decision['status'])}
+                  className="field-control w-full"
+                >
+                  <option value="proposed">Proposed</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="reverted">Reverted</option>
+                  <option value="validated">Validated</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="decision-confidence" className="block text-sm font-medium text-surface-700 mb-1">Confidence</label>
+                <select
+                  id="decision-confidence"
+                  value={confidence}
+                  onChange={(e) => setConfidence(e.target.value as Decision['confidence'])}
+                  className="field-control w-full"
+                >
+                  <option value="low">Low (Reversible experiment)</option>
+                  <option value="moderate">Moderate (Likely correct)</option>
+                  <option value="high">High (Strong evidence)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-surface-700 mb-2">Link Hypotheses</label>
               <div className="max-h-48 overflow-y-auto border border-surface-200 rounded-md p-2 space-y-1">
                 {hypotheses?.length === 0 && (
@@ -184,31 +292,18 @@ export function Decisions() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="decision-confidence" className="block text-sm font-medium text-surface-700 mb-1">Confidence in Decision</label>
-              <select
-                id="decision-confidence"
-                value={confidence}
-                onChange={(e) => setConfidence(e.target.value as Decision['confidence'])}
-                className="field-control w-full md:w-1/3"
-              >
-                <option value="low">Low (Reversible experiment)</option>
-                <option value="moderate">Moderate (Likely correct)</option>
-                <option value="high">High (Strong evidence)</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center">
               <button
                 type="submit"
-                className="button-primary"
+                disabled={isSubmitting}
+                className="button-primary w-full sm:w-auto"
               >
                 Record Decision
               </button>
               <button
                 type="button"
-                onClick={() => setIsCreating(false)}
-                className="button-secondary"
+                onClick={() => { submissionLock.current = false; setIsCreating(false); }}
+                className="button-secondary w-full sm:w-auto"
               >
                 Cancel
               </button>
@@ -226,15 +321,56 @@ export function Decisions() {
 
             <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded border border-surface-200 bg-white shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <time className="text-xs font-medium uppercase text-primary-600 tracking-wider">
-                  {new Date(d.createdAt).toLocaleDateString()}
-                </time>
-                <button onClick={() => handleDelete(d.id)} className="text-surface-400 hover:text-red-500 p-1 rounded">
+                <div className="flex items-center gap-2">
+                  <time className="text-xs font-medium uppercase text-primary-600 tracking-wider">
+                    {new Date(d.createdAt).toLocaleDateString()}
+                  </time>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    d.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                    d.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    d.status === 'reverted' ? 'bg-orange-100 text-orange-700' :
+                    d.status === 'validated' ? 'bg-indigo-100 text-indigo-700' :
+                    'bg-surface-100 text-surface-700'
+                  }`}>
+                    {d.status}
+                  </span>
+                </div>
+                <button onClick={() => handleDelete(d.id)} className="text-surface-400 hover:text-red-500 p-1 rounded" title="Delete Decision">
                   <Trash2 size={16} />
                 </button>
               </div>
-              <h3 className="font-semibold text-surface-900 text-lg mb-1">{d.title}</h3>
-              {d.reason && <p className="text-sm text-surface-600 mb-3">{d.reason}</p>}
+              <h3 className="font-semibold text-surface-900 text-lg mb-1 line-clamp-2">{d.title}</h3>
+              {d.description && <p className="text-sm text-surface-700 mb-3 font-medium line-clamp-3">{d.description}</p>}
+              {d.reason && (
+                <div className="mb-3">
+                  <h4 className="text-xs font-semibold uppercase text-surface-500 mb-1">Reasoning</h4>
+                  <p className="text-sm text-surface-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{d.reason}</p>
+                </div>
+              )}
+              {d.alternatives && (
+                <div className="mb-3">
+                  <h4 className="text-xs font-semibold uppercase text-surface-500 mb-1">Alternatives Considered</h4>
+                  <p className="text-sm text-surface-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{d.alternatives}</p>
+                </div>
+              )}
+              {d.assumptions && (
+                <div className="mb-3">
+                  <h4 className="text-xs font-semibold uppercase text-surface-500 mb-1">Assumptions</h4>
+                  <p className="text-sm text-surface-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{d.assumptions}</p>
+                </div>
+              )}
+              {d.validationMethod && (
+                <div className="mb-3">
+                  <h4 className="text-xs font-semibold uppercase text-surface-500 mb-1">Validation Method</h4>
+                  <p className="text-sm text-surface-600 whitespace-pre-wrap max-h-32 overflow-y-auto">{d.validationMethod}</p>
+                </div>
+              )}
+              {d.outcome && (
+                <div className="mb-3 p-2 bg-surface-50 border border-surface-200 rounded text-sm text-surface-700">
+                  <span className="font-semibold block text-xs uppercase text-surface-500 mb-1">Outcome</span>
+                  <span className="block max-h-32 overflow-y-auto">{d.outcome}</span>
+                </div>
+              )}
 
               <div className="mt-4 pt-3 border-t border-surface-100 flex justify-between items-center text-sm">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
@@ -253,7 +389,8 @@ export function Decisions() {
 
         {decisions?.length === 0 && !isCreating && (
           <div className="py-12 text-center text-surface-500 w-full relative z-10 bg-surface-50">
-            <p>No decisions recorded yet.</p>
+            <p className="font-semibold text-surface-800">Decisions without context are just guesses</p>
+            <p className="mt-1 text-sm">Record what you decided, what you rejected, and which evidence informed the call—so your future self can understand why.</p>
           </div>
         )}
       </div>

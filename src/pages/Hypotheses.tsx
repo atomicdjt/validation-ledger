@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { AlertCircle, CheckCircle2, Edit2, Lightbulb, Plus, Trash2, X, XCircle } from 'lucide-react';
 import { db } from '../db/db';
@@ -20,6 +20,8 @@ export function Hypotheses() {
   const [statement, setStatement] = useState('');
   const [category, setCategory] = useState('');
   const [importance, setImportance] = useState<Hypothesis['importance']>('medium');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   const resetForm = () => {
     setIsEditing(false);
@@ -30,11 +32,13 @@ export function Hypotheses() {
   };
 
   const openCreate = () => {
+    submissionLock.current = false;
     resetForm();
     setIsEditing(true);
   };
 
   const openEdit = (hypothesis: Hypothesis) => {
+    submissionLock.current = false;
     setEditingId(hypothesis.id);
     setStatement(hypothesis.statement);
     setCategory(hypothesis.category);
@@ -46,27 +50,44 @@ export function Hypotheses() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!statement.trim() || !activeProjectId) return;
-    if (editingId) {
-      await db.hypotheses.update(editingId, {
-        statement: statement.trim(),
-        category: category.trim() || 'General',
-        importance,
-        lastReviewed: Date.now(),
-      });
-    } else {
-      await db.hypotheses.add({
-        id: generateId(),
-        projectId: activeProjectId,
-        statement: statement.trim(),
-        category: category.trim() || 'General',
-        importance,
-        status: 'unvalidated',
-        confidenceScore: 0,
-        createdAt: Date.now(),
-      });
-      analytics.track('hypothesis_created', { importance });
+    const form = event.currentTarget as HTMLFormElement;
+    if (form.dataset.submitting === 'true' || isSubmitting || submissionLock.current) return;
+
+    form.dataset.submitting = 'true';
+    submissionLock.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
+    try {
+      if (editingId) {
+        await db.hypotheses.update(editingId, {
+          statement: statement.trim(),
+          category: category.trim() || 'General',
+          importance,
+          lastReviewed: Date.now(),
+        });
+        succeeded = true;
+      } else {
+        await db.hypotheses.add({
+          id: generateId(),
+          projectId: activeProjectId,
+          statement: statement.trim(),
+          category: category.trim() || 'General',
+          importance,
+          status: 'unvalidated',
+          confidenceScore: 0,
+          createdAt: Date.now(),
+        });
+        analytics.track('hypothesis_created', { importance });
+        succeeded = true;
+      }
+      resetForm();
+    } finally {
+      if (!succeeded) {
+        form.dataset.submitting = 'false';
+        submissionLock.current = false;
+      }
+      setIsSubmitting(false);
     }
-    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -116,7 +137,7 @@ export function Hypotheses() {
                 <option value="critical">Critical · Make or break</option>
               </select>
             </label>
-            <button type="submit" className="button-primary">{editingId ? 'Save Changes' : 'Add Hypothesis'}</button>
+            <button type="submit" disabled={isSubmitting} className="button-primary w-full sm:w-auto">{editingId ? 'Save Changes' : 'Add Hypothesis'}</button>
           </form>
         </section>
       ) : null}
@@ -134,7 +155,7 @@ export function Hypotheses() {
                     <span className="rounded-md bg-surface-100 px-2 py-1 text-surface-600">{hypothesis.category}</span>
                     <span className="rounded-md bg-primary-50 px-2 py-1 text-primary-700">{hypothesis.importance}</span>
                   </div>
-                  <h2 className="mt-3 text-base font-semibold leading-6 text-surface-950">{hypothesis.statement}</h2>
+                  <h2 className="mt-3 text-base font-semibold leading-6 text-surface-950 line-clamp-3">{hypothesis.statement}</h2>
                   <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-surface-500">
                     <span className="flex items-center gap-1.5 capitalize">{statusIcon(hypothesis.status)} {hypothesis.status}</span>
                     <span className="font-semibold text-surface-600">Support score {hypothesis.confidenceScore}/100</span>
@@ -150,8 +171,8 @@ export function Hypotheses() {
         ) : (
           <div className="px-6 py-14 text-center">
             <Lightbulb className="mx-auto text-surface-300" size={36} />
-            <p className="mt-3 font-semibold text-surface-800">No hypotheses yet</p>
-            <p className="mt-1 text-sm text-surface-500">Record the assumptions that could change what you build.</p>
+            <p className="mt-3 font-semibold text-surface-800">Every roadmap is built on assumptions</p>
+            <p className="mt-1 text-sm text-surface-500">Document the beliefs your product depends on. Then test them against real customer evidence before they become expensive mistakes.</p>
           </div>
         )}
       </section>

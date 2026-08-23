@@ -63,7 +63,7 @@ export function Report() {
 
       <div className="panel p-5 sm:p-8 lg:p-10 print:shadow-none print:border-none print:p-0">
         <header className="mb-10 border-b border-surface-200 pb-8">
-          <h1 className="text-3xl font-extrabold text-surface-900 mb-2">{project?.name || 'Validation Project'}</h1>
+          <h2 className="text-3xl font-extrabold text-surface-900 mb-2">{project?.name || 'Validation Project'}</h2>
           <p className="text-lg text-surface-600 mb-4">{project?.productDescription}</p>
           <div className="bg-surface-50 p-4 rounded-lg">
             <h3 className="font-semibold text-surface-900 mb-1">Research Objective</h3>
@@ -77,12 +77,12 @@ export function Report() {
         </header>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">1. Supported Hypotheses</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">1. Supported Hypotheses</h3>
           {validated.length > 0 ? (
             <div className="space-y-4">
               {validated.map(h => (
                 <div key={h.id} className="p-4 bg-green-50/50 border border-green-100 rounded-lg">
-                  <h3 className="font-semibold text-surface-900">{h.statement}</h3>
+                  <h4 className="font-semibold text-surface-900">{h.statement}</h4>
                   <div className="mt-2 text-sm text-surface-700">
                     Support score: {analyses[h.id]?.score}/100 • {analyses[h.id]?.uniqueSupportingSourcesCount} independent supporting source{analyses[h.id]?.uniqueSupportingSourcesCount === 1 ? '' : 's'}
                   </div>
@@ -95,12 +95,12 @@ export function Report() {
         </section>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">2. Contradicted Hypotheses</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">2. Contradicted Hypotheses</h3>
           {contradicted.length > 0 ? (
             <div className="space-y-4">
               {contradicted.map(h => (
                 <div key={h.id} className="p-4 bg-red-50/50 border border-red-100 rounded-lg">
-                  <h3 className="font-semibold text-surface-900">{h.statement}</h3>
+                  <h4 className="font-semibold text-surface-900">{h.statement}</h4>
                   <div className="mt-2 text-sm text-surface-700">
                     {analyses[h.id]?.uniqueContradictingSourcesCount} independent contradicting source{analyses[h.id]?.uniqueContradictingSourcesCount === 1 ? '' : 's'}
                   </div>
@@ -113,12 +113,12 @@ export function Report() {
         </section>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">3. Evidence Matrix</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">3. Evidence Matrix</h3>
           <EvidenceMatrix />
         </section>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">4. Pricing Evidence</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">4. Pricing Evidence</h3>
           {pricingEvidence.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {pricingEvidence.map(e => (
@@ -134,12 +134,12 @@ export function Report() {
         </section>
 
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">5. Key Decisions Made</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">5. Key Decisions Made</h3>
           {decisions && decisions.length > 0 ? (
             <div className="space-y-6">
               {decisions.map(d => (
                 <div key={d.id}>
-                  <h3 className="font-semibold text-surface-900 mb-1">{d.title}</h3>
+                  <h4 className="font-semibold text-surface-900 mb-1">{d.title}</h4>
                   <p className="text-sm text-surface-700">{d.reason}</p>
                   <div className="text-xs text-surface-500 mt-1 uppercase tracking-wider">Decision confidence: {d.confidence}</div>
                 </div>
@@ -151,7 +151,7 @@ export function Report() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">6. Unresolved / Next Steps</h2>
+          <h3 className="text-xl font-bold text-surface-900 border-b border-surface-200 pb-2 mb-4">6. Unresolved / Next Steps</h3>
           {weak.length > 0 ? (
             <ul className="list-disc pl-5 space-y-2 text-surface-700">
               {weak.map(h => (

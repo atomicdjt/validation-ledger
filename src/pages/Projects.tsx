@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useState } from 'react';
+import { FormEvent, MouseEvent, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Edit2, FolderKanban, Plus, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +20,9 @@ export function Projects() {
   const [description, setDescription] = useState('');
   const [objective, setObjective] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
+
   const resetForm = () => {
     setIsEditing(false);
     setEditingId(null);
@@ -29,12 +32,14 @@ export function Projects() {
   };
 
   const openCreate = () => {
+    submissionLock.current = false;
     resetForm();
     setIsEditing(true);
   };
 
   const openEdit = (event: MouseEvent, project: Project) => {
     event.stopPropagation();
+    submissionLock.current = false;
     setEditingId(project.id);
     setName(project.name);
     setDescription(project.productDescription);
@@ -45,31 +50,48 @@ export function Projects() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) return;
-    if (editingId) {
-      await db.projects.update(editingId, {
+    const form = event.currentTarget as HTMLFormElement;
+    if (form.dataset.submitting === 'true' || isSubmitting || submissionLock.current) return;
+
+    form.dataset.submitting = 'true';
+    submissionLock.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
+    try {
+      if (editingId) {
+        await db.projects.update(editingId, {
+          name: name.trim(),
+          productDescription: description.trim(),
+          validationObjective: objective.trim(),
+          updatedAt: Date.now(),
+        });
+        succeeded = true;
+        resetForm();
+        return;
+      }
+
+      const newProject: Project = {
+        id: generateId(),
         name: name.trim(),
         productDescription: description.trim(),
         validationObjective: objective.trim(),
+        stage: 'idea',
+        createdAt: Date.now(),
         updatedAt: Date.now(),
-      });
+      };
+      await db.projects.add(newProject);
+      analytics.track('project_created', { project_stage: 'idea' });
+      setActiveProject(newProject.id);
       resetForm();
-      return;
+      succeeded = true;
+      navigate('/');
+    } finally {
+      if (!succeeded) {
+        form.dataset.submitting = 'false';
+        submissionLock.current = false;
+      }
+      setIsSubmitting(false);
     }
-
-    const newProject: Project = {
-      id: generateId(),
-      name: name.trim(),
-      productDescription: description.trim(),
-      validationObjective: objective.trim(),
-      stage: 'idea',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    await db.projects.add(newProject);
-    analytics.track('project_created', { project_stage: 'idea' });
-    setActiveProject(newProject.id);
-    resetForm();
-    navigate('/');
   };
 
   const handleDelete = async (event: MouseEvent, project: Project) => {
@@ -116,7 +138,7 @@ export function Projects() {
               </label>
             </div>
             <div className="flex justify-end">
-              <button type="submit" className="button-primary">{editingId ? 'Save Changes' : 'Create Project'}</button>
+              <button type="submit" disabled={isSubmitting} className="button-primary w-full sm:w-auto">{editingId ? 'Save Changes' : 'Create Project'}</button>
             </div>
           </form>
         </section>

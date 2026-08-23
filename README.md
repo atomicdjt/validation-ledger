@@ -1,11 +1,11 @@
 # Validation Ledger
 
-**Turn customer conversations into traceable product decisions—without letting summaries erase the evidence.**
+**Turn customer conversations into traceable product decisions—without losing the chain of reasoning.**
 
 **[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ```text
-SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION
+SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION (with alternatives, assumptions, and outcomes)
                      ↘ COUNTEREVIDENCE
 ```
 

@@ -10,7 +10,7 @@ const complete = () => ({
   sources:[{id:'src',projectId:'p',participantId:'P1',segmentId:'s',date:3,type:'interview',rawText:'Quote',metadata:{channel:'web'},tags:['tag']}],
   evidenceSignals:[{id:'e',projectId:'p',sourceId:'src',segmentId:'s',hypothesisId:'h',relationship:'supports',classification:'pain',statement:'Pain',exactExcerpt:'Quote',isDirect:true,confidence:5,notes:'',createdAt:4,provenanceState:'exact'}],
   hypotheses:[{id:'h',projectId:'p',statement:'H',category:'problem',importance:'critical',status:'weak-evidence',confidenceScore:22,createdAt:5,lastReviewed:6}],
-  decisions:[{id:'d',projectId:'p',title:'D',description:'',reason:'R',confidence:'moderate',createdAt:7,reviewDate:8}],
+  decisions:[{id:'d',projectId:'p',title:'D',description:'Summary',reason:'R',confidence:'moderate',status:'accepted',alternatives:'Alternative B',assumptions:'Users will adopt this',validationMethod:'Run a usability session',outcome:'Validated by five users',createdAt:7,reviewDate:8}],
   evidenceDecisionLinks:[{id:'ed',projectId:'p',evidenceId:'e',decisionId:'d'}],
   hypothesisDecisionLinks:[{id:'hd',projectId:'p',hypothesisId:'h',decisionId:'d'}],
 });
@@ -23,7 +23,23 @@ describe('backup validation and atomic restore',()=>{
     const exported=JSON.parse(await exportDatabase()); exported.exportedAt=new Date(0).toISOString();
     expect(exported).toEqual(complete());
     await db.delete(); await db.open(); await importDatabase(JSON.stringify(exported));
+    expect(await db.projects.get('p')).toEqual(complete().projects[0]);
+    expect(await db.sources.get('src')).toEqual(complete().sources[0]);
     expect(await db.evidenceSignals.get('e')).toMatchObject({hypothesisId:'h',relationship:'supports',provenanceState:'exact'});
+    expect(await db.hypotheses.get('h')).toMatchObject({statement:'H',category:'problem',importance:'critical'});
+    expect(await db.decisions.get('d')).toMatchObject({
+      title:'D',
+      description:'Summary',
+      reason:'R',
+      confidence:'moderate',
+      status:'accepted',
+      alternatives:'Alternative B',
+      assumptions:'Users will adopt this',
+      validationMethod:'Run a usability session',
+      outcome:'Validated by five users',
+    });
+    expect(await db.evidenceDecisionLinks.get('ed')).toEqual(complete().evidenceDecisionLinks[0]);
+    expect(await db.hypothesisDecisionLinks.get('hd')).toEqual(complete().hypothesisDecisionLinks[0]);
   });
   it.each([
     ['unsupported version',(x:any)=>{x.formatVersion=99;}],

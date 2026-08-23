@@ -85,6 +85,11 @@ export interface Decision {
   description: string;
   reason: string;
   confidence: 'low' | 'moderate' | 'high';
+  status: 'proposed' | 'accepted' | 'rejected' | 'reverted' | 'validated';
+  alternatives: string;
+  assumptions: string;
+  validationMethod: string;
+  outcome: string;
   createdAt: number;
   reviewDate?: number;
 }
