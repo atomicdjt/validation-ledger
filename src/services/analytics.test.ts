@@ -42,20 +42,4 @@ describe('privacy-safe analytics', () => {
     expect(config.property_blacklist).toContain('$raw_user_agent');
   });
 
-  it('strips browser, location, and arbitrary content before sending', () => {
-    const config = getAnalyticsConfig('https://us.i.posthog.com');
-    const data = config.before_send?.({
-      uuid: 'test-uuid',
-      event: 'application_loaded',
-      properties: {
-        entry_point: 'direct',
-        '$current_url': 'https://private.example/path',
-        '$raw_user_agent': 'secret browser detail',
-        '$geoip_city_name': 'Richmond',
-        evidence_text: 'do not send',
-      },
-    });
-
-    expect(data?.properties).toEqual({ entry_point: 'direct', $geoip_disable: true });
-  });
 });

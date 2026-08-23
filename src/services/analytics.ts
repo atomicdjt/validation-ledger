@@ -1,4 +1,4 @@
-import posthog, { type CaptureResult } from 'posthog-js';
+import posthog from 'posthog-js';
 
 type AnalyticsEventProperties = {
   application_loaded: { entry_point: 'direct' };
@@ -70,19 +70,6 @@ export function getAnalyticsConfig(apiHost: string) {
       '$viewport_height',
       '$viewport_width',
     ],
-    before_send: (data: CaptureResult | null) => {
-      if (!data?.properties) return data;
-
-      // GeoIP is derived server-side unless explicitly disabled per event.
-      // Keep only the typed product properties plus this control flag and the
-      // SDK fields required for ingestion; never forward browser/page context.
-      const allowed = new Set(['$geoip_disable', '$lib', '$lib_version', 'token', 'entry_point', 'project_stage', 'source_type', 'has_content', 'importance', 'confidence', 'linked_evidence_count', 'linked_hypothesis_count']);
-      const properties = Object.fromEntries(
-        Object.entries(data.properties).filter(([name]) => allowed.has(name)),
-      );
-      properties.$geoip_disable = true;
-      return { ...data, properties };
-    },
     on_request_error: (response: { statusCode?: number; error?: unknown }) => {
       const detail = response.error instanceof Error ? response.error.message : typeof response.error === 'string' ? response.error : 'unknown';
       console.warn('[telemetry] PostHog request failed', response.statusCode ?? 'unknown', detail);
