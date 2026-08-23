@@ -83,8 +83,9 @@ export function getAnalyticsConfig(apiHost: string) {
       properties.$geoip_disable = true;
       return { ...data, properties };
     },
-    on_request_error: (response: { statusCode?: number }) => {
-      console.warn('[telemetry] PostHog request failed', response.statusCode ?? 'unknown');
+    on_request_error: (response: { statusCode?: number; error?: unknown }) => {
+      const detail = response.error instanceof Error ? response.error.message : typeof response.error === 'string' ? response.error : 'unknown';
+      console.warn('[telemetry] PostHog request failed', response.statusCode ?? 'unknown', detail);
     },
   };
 }
