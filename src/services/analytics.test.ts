@@ -66,6 +66,10 @@ describe('privacy-safe analytics', () => {
       disable_session_recording: true,
       person_profiles: 'never',
       persistence: 'memory',
+      capture_dead_clicks: false,
+      capture_exceptions: false,
+      capture_heatmaps: false,
+      capture_performance: false,
       property_blacklist: expect.arrayContaining(['$current_url', '$raw_user_agent', '$browser', '$os']),
     }));
     expect(client.capture).toHaveBeenCalledWith('application_loaded', { entry_point: 'direct', $geoip_disable: true });
