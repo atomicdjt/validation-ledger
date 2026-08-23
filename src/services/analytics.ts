@@ -83,6 +83,9 @@ export function getAnalyticsConfig(apiHost: string) {
       properties.$geoip_disable = true;
       return { ...data, properties };
     },
+    on_request_error: (response: { statusCode?: number }) => {
+      console.warn('[telemetry] PostHog request failed', response.statusCode ?? 'unknown');
+    },
   };
 }
 
@@ -96,6 +99,7 @@ export function initializeAnalytics() {
 
   try {
     posthog.init(publicKey, getAnalyticsConfig(host));
+    posthog.on('eventCaptured', ({ event }) => console.info('[telemetry] captured', event));
     analytics.trackOnce('application_loaded', { entry_point: 'direct' });
   } catch {
     // Analytics initialization is optional and must fail open.
