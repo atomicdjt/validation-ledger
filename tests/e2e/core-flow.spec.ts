@@ -29,12 +29,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function ensureActiveProject(page: import('@playwright/test').Page) {
-  const projectSelector = page.getByRole('button', { name: 'Project Select a project' });
-  if (await projectSelector.isVisible().catch(() => false)) {
-    await page.goto('/projects');
-    await page.getByRole('button', { name: /AI Autonomous Agent Platform/ }).first().click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  }
+  await page.goto('/projects');
+  const demoCard = page.locator('article > button').filter({ hasText: 'AI Autonomous Agent Platform' }).first();
+  await expect(demoCard).toBeVisible();
+  await demoCard.click();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 }
 
 test('creates a traceable source-to-decision workflow and exports a backup', async ({ page }) => {
