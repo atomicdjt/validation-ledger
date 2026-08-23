@@ -1,4 +1,4 @@
-import posthog from 'posthog-js';
+import posthog, { type CaptureResult } from 'posthog-js';
 
 type AnalyticsEventProperties = {
   application_loaded: { entry_point: 'direct' };
@@ -48,13 +48,43 @@ export function getAnalyticsConfig(apiHost: string) {
     disable_session_recording: true,
     person_profiles: 'never' as const,
     persistence: 'memory' as const,
-    property_blacklist: ['$current_url', '$host', '$pathname', '$referrer', '$referring_domain'],
+    property_blacklist: [
+      '$current_url',
+      '$host',
+      '$pathname',
+      '$referrer',
+      '$referring_domain',
+      '$raw_user_agent',
+      '$browser',
+      '$browser_language',
+      '$browser_language_prefix',
+      '$device_type',
+      '$os',
+      '$os_version',
+      '$screen_height',
+      '$screen_width',
+      '$viewport_height',
+      '$viewport_width',
+    ],
+    before_send: (data: CaptureResult | null) => {
+      if (!data?.properties) return data;
+
+      // GeoIP is derived server-side unless explicitly disabled per event.
+      // Keep only the typed product properties plus this control flag and the
+      // SDK fields required for ingestion; never forward browser/page context.
+      const allowed = new Set(['$geoip_disable', '$lib', '$lib_version', 'token', 'entry_point', 'project_stage', 'source_type', 'has_content', 'importance', 'confidence', 'linked_evidence_count', 'linked_hypothesis_count']);
+      data.properties = Object.fromEntries(
+        Object.entries(data.properties).filter(([name]) => allowed.has(name)),
+      );
+      data.properties.$geoip_disable = true;
+      return data;
+    },
   };
 }
 
 export const analytics = createAnalytics({
   key: publicKey,
-  capture: (event, properties) => posthog.capture(event, properties),
+  capture: (event, properties) => posthog.capture(event, { ...properties, $geoip_disable: true }),
 });
 
 export function initializeAnalytics() {
