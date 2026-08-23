@@ -6,6 +6,7 @@ import { generateId } from '../utils/id';
 import { Plus, Trash2, Link } from 'lucide-react';
 import type { Decision } from '../db/models';
 import { deleteDecisionCascade } from '../db/operations';
+import { analytics } from '../services/analytics';
 
 export function Decisions() {
   const activeProjectId = useStore(state => state.activeProjectId);
@@ -58,6 +59,11 @@ export function Decisions() {
       for (const evidenceId of selectedEvidence) {
         await db.evidenceDecisionLinks.add({ id: generateId(), projectId: activeProjectId, evidenceId, decisionId: newDecision.id });
       }
+    });
+    analytics.track('decision_created', {
+      confidence,
+      linked_evidence_count: selectedEvidence.length,
+      linked_hypothesis_count: selectedHypotheses.length,
     });
 
     setIsCreating(false);

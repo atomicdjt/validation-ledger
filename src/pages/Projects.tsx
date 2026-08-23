@@ -7,6 +7,7 @@ import type { Project } from '../db/models';
 import { deleteProjectCascade } from '../db/operations';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
+import { analytics } from '../services/analytics';
 
 export function Projects() {
   const projects = useLiveQuery(() => db.projects.toArray(), [], []);
@@ -65,6 +66,7 @@ export function Projects() {
       updatedAt: Date.now(),
     };
     await db.projects.add(newProject);
+    analytics.track('project_created', { project_stage: 'idea' });
     setActiveProject(newProject.id);
     resetForm();
     navigate('/');

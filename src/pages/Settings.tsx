@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Check, Download, Eye, EyeOff, KeyRound, Save, ShieldCheck, Upload } from 'lucide-react';
 import { exportDatabase, importDatabase } from '../db/exportImport';
 import { useStore } from '../store/useStore';
+import { analytics } from '../services/analytics';
 
 export function Settings() {
   const setActiveProject = useStore((state) => state.setActiveProject);
@@ -32,6 +33,7 @@ export function Settings() {
     anchor.download = `validation-ledger-backup-${new Date().toISOString().split('T')[0]}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
+    analytics.track('backup_exported', {});
   };
 
   const handleImport = async () => {
@@ -41,6 +43,7 @@ export function Settings() {
       setIsImporting(true);
       setImportError('');
       setActiveProject(await importDatabase(importText));
+      analytics.track('backup_imported', {});
       window.location.assign('/');
     } catch (caughtError) {
       setImportError(caughtError instanceof Error ? caughtError.message : 'Import failed.');
