@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use Validation Ledger in research, product-discovery, or technical work, please cite this software."
+title: "Validation Ledger"
+type: software
+authors:
+  - family-names: "Turner"
+    given-names: "David"
+version: 1.0.2
+url: "https://ai-project-portfolio-portfolio-hub.vercel.app/projects/validation-ledger"
+repository-code: "https://github.com/atomicdjt/validation-ledger"
+license: MIT
+abstract: >-
+  Local-first product-discovery workspace for keeping source material,
+  evidence, counterevidence, hypotheses, and decisions traceable through
+  an inspectable evidence model.
+keywords:
+  - product discovery
+  - customer discovery
+  - UX research
+  - local-first
+  - evidence management
+  - decision traceability
