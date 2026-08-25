@@ -2,7 +2,7 @@
 
 **Turn customer conversations into traceable product decisions—without losing the chain of reasoning.**
 
-**[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
+**[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/validation-ledger) · [Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ```text
 SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION (with alternatives, assumptions, and outcomes)
@@ -124,7 +124,7 @@ The scoring system is intentionally heuristic. It structures judgment; it does n
 
 ## More projects
 
-[BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
+[Canonical Validation Ledger page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/validation-ledger) · [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [WeaveStudio](https://github.com/atomicdjt/weavestudio) · [GitHub profile](https://github.com/atomicdjt) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
 
 ## License
 
