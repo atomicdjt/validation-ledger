@@ -31,7 +31,7 @@ Validation Ledger is an MIT-licensed, local-first product-discovery workspace fo
 
 ## Product tour
 
-The workspace includes project and hypothesis management, a source library, source-level evidence extraction, an evidence matrix, decision tracking, reporting, backup controls, and guided demo data.
+The workspace includes project and hypothesis management, a source library, source-level evidence extraction, an evidence matrix, decision tracking, reporting, backup controls, and guided demo data. The guided data includes an **Evidence Review Workspace** example with three synthetic sources, a conditional willingness-to-pay signal, and material counterevidence so evaluators can see the intended `mixed` hypothesis semantics without importing real research data.
 
 <p align="center">
   <img src="docs/images/source-mobile.png" alt="Validation Ledger source detail on mobile" width="380" />
@@ -129,3 +129,4 @@ The scoring system is intentionally heuristic. It structures judgment; it does n
 ## License
 
 Validation Ledger is open source under the [MIT License](LICENSE). Copyright © 2026 atomicdjt.
+
