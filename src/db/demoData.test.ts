@@ -21,6 +21,7 @@ describe('guided demo data', () => {
     const sources = await db.sources.where('projectId').equals(project!.id).toArray();
     const evidence = await db.evidenceSignals.where('projectId').equals(project!.id).toArray();
     const hypothesis = await db.hypotheses.where('projectId').equals(project!.id).first();
+    const decisions = await db.decisions.where('projectId').equals(project!.id).toArray();
 
     expect(new Set(sources.map((source) => source.participantId)).size).toBe(3);
     expect(evidence).toHaveLength(3);
@@ -31,6 +32,17 @@ describe('guided demo data', () => {
     const analysis = calculateScore(evidence);
     expect(analysis.status).toBe('mixed');
     expect(hypothesis).toMatchObject({ status: 'mixed', confidenceScore: analysis.score });
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]).toMatchObject({
+      title: 'Run a bounded workflow evaluation before recurring purchase',
+      status: 'proposed',
+      confidence: 'low',
+      outcome: 'Pending external evaluation; synthetic demo only.'
+    });
+
+    const decisionId = decisions[0].id;
+    expect(await db.hypothesisDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(1);
+    expect(await db.evidenceDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(3);
   });
 });
 

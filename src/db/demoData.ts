@@ -153,6 +153,7 @@ export async function injectDemoData() {
   const mixedSegmentId = generateId();
   const mixedHypothesisId = generateId();
   const mixedSourceIds = [generateId(), generateId(), generateId()];
+  const mixedEvidenceIds = [generateId(), generateId(), generateId()];
 
   await db.projects.add({
     id: mixedProjectId,
@@ -227,7 +228,7 @@ export async function injectDemoData() {
 
   await db.evidenceSignals.bulkAdd([
     {
-      id: generateId(),
+      id: mixedEvidenceIds[0],
       projectId: mixedProjectId,
       sourceId: mixedSourceIds[0],
       segmentId: mixedSegmentId,
@@ -243,7 +244,7 @@ export async function injectDemoData() {
       provenanceState: 'exact'
     },
     {
-      id: generateId(),
+      id: mixedEvidenceIds[1],
       projectId: mixedProjectId,
       sourceId: mixedSourceIds[1],
       segmentId: mixedSegmentId,
@@ -259,7 +260,7 @@ export async function injectDemoData() {
       provenanceState: 'exact'
     },
     {
-      id: generateId(),
+      id: mixedEvidenceIds[2],
       projectId: mixedProjectId,
       sourceId: mixedSourceIds[2],
       segmentId: mixedSegmentId,
@@ -282,6 +283,32 @@ export async function injectDemoData() {
     status: mixedAnalysis.status,
     confidenceScore: mixedAnalysis.score,
     lastReviewed: Date.now()
+  });
+
+  const mixedDecisionId = generateId();
+  await db.decisions.add({
+    id: mixedDecisionId,
+    projectId: mixedProjectId,
+    title: 'Run a bounded workflow evaluation before recurring purchase',
+    description: 'Do not adopt the review workspace on synthetic evidence alone; run a bounded evaluation that tests traceability value against maintenance cost.',
+    reason: 'The synthetic evidence is mixed: two signals support traceability value while one material objection says the workflow duplicates a shared document.',
+    confidence: 'low',
+    status: 'proposed',
+    alternatives: 'Adopt immediately; stop pursuing the workspace as a standalone product.',
+    assumptions: 'A concrete workflow evaluation can distinguish traceability value from added maintenance work.',
+    validationMethod: 'Ask a qualified practitioner for a recent example, incumbent workflow, repeat-use trigger, and strongest reason not to use the product.',
+    outcome: 'Pending external evaluation; synthetic demo only.',
+    createdAt: Date.now()
+  });
+
+  await db.evidenceDecisionLinks.bulkAdd(
+    mixedEvidenceIds.map((evidenceId) => ({ id: generateId(), projectId: mixedProjectId, evidenceId, decisionId: mixedDecisionId }))
+  );
+  await db.hypothesisDecisionLinks.add({
+    id: generateId(),
+    projectId: mixedProjectId,
+    hypothesisId: mixedHypothesisId,
+    decisionId: mixedDecisionId
   });
 
   // Set as active project
