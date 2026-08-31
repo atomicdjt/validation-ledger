@@ -25,7 +25,7 @@ Validation Ledger is an MIT-licensed, local-first product-discovery workspace fo
 
 ![Validation Ledger dashboard](docs/images/dashboard.png)
 
-> **Feedback wanted:** where does this evidence model create false confidence, miss an important kind of discovery signal, or handle contradiction poorly? If the approach is useful, starring the repository helps other product teams discover it.
+> **External validation wanted:** where does this evidence model create false confidence, miss an important discovery signal, or handle contradiction poorly? If you use it in a real or representative discovery workflow, [open an issue](https://github.com/atomicdjt/validation-ledger/issues) with the smallest anonymized case that exposes a scoring disagreement, missing evidence type, or workflow failure.
 
 **Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
