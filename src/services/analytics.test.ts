@@ -116,6 +116,56 @@ describe('privacy-safe analytics', () => {
     });
   });
 
+  it('drops an allowlisted event when an application property value is invalid', () => {
+    expect(sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000003',
+      event: 'application_loaded',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        entry_point: 'alice@example.com',
+      },
+    })).toBeNull();
+
+    expect(sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000004',
+      event: 'decision_created',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        confidence: 'high',
+        linked_evidence_count: -1,
+        linked_hypothesis_count: 2,
+      },
+    })).toBeNull();
+  });
+
+  it('retains valid application properties after transport validation', () => {
+    const sanitized = sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000005',
+      event: 'decision_created',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        confidence: 'moderate',
+        linked_evidence_count: 2,
+        linked_hypothesis_count: 1,
+      },
+    });
+
+    expect(sanitized?.properties).toEqual({
+      token: 'phc_test',
+      distinct_id: 'anonymous-device',
+      $geoip_disable: true,
+      confidence: 'moderate',
+      linked_evidence_count: 2,
+      linked_hypothesis_count: 1,
+    });
+  });
+
   it('drops events outside the application allowlist', () => {
     expect(sanitizeTelemetryEvent({
       uuid: '00000000-0000-4000-8000-000000000002',
