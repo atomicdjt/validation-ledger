@@ -48,17 +48,24 @@ export const sanitizeTelemetryEvent: BeforeSendFn = (event) => {
   if (!event || !isAnalyticsEventName(event.event)) return null;
 
   const source = event.properties ?? {};
-  const allowedKeys = new Set<string>([
-    ...requiredTransportPropertyKeys,
-    ...analyticsEventPropertyKeys[event.event],
-  ]);
-  const properties: Properties = {};
+  const applicationProperties: Record<string, unknown> = {};
+  for (const key of analyticsEventPropertyKeys[event.event]) {
+    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+      applicationProperties[key] = source[key];
+    }
+  }
 
-  for (const key of allowedKeys) {
+  if (!isSafeProperties(event.event, applicationProperties as AnalyticsEventProperties[typeof event.event])) {
+    return null;
+  }
+
+  const properties: Properties = {};
+  for (const key of requiredTransportPropertyKeys) {
     if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
       properties[key] = source[key];
     }
   }
+  Object.assign(properties, applicationProperties);
 
   const sanitized: CaptureResult = {
     uuid: event.uuid,
