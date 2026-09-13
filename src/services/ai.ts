@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import type { EvidenceSignal, Hypothesis } from '../db/models';
+import { getGeminiApiKey } from './apiKeySession';
 
 export interface ExtractedEvidence {
   classification: string;
@@ -18,7 +19,7 @@ export interface GeneratedInterviewQuestion {
 }
 
 function getApiKey(): string | null {
-  return localStorage.getItem('validation_ledger_gemini_key');
+  return getGeminiApiKey();
 }
 
 function parseJsonArray<T>(value: string, isValidItem: (item: unknown) => item is T): T[] {
