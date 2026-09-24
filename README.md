@@ -1,5 +1,7 @@
 # Validation Ledger
 
+[![CI](https://github.com/atomicdjt/validation-ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/atomicdjt/validation-ledger/actions/workflows/ci.yml)
+
 **Turn customer conversations into traceable product decisions—without losing the chain of reasoning.**
 
 **[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/validation-ledger) · [Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
