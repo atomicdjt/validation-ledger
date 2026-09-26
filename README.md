@@ -1,3 +1,15 @@
+<div align="center">
+
+<img src="./docs/images/repository-header.svg" alt="VALIDATION LEDGER — portfolio identity banner" width="100%" />
+
+<br />
+
+[**PROJECT PAGE**](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/validation-ledger) · [**LIVE DEMO**](https://validation-ledger.vercel.app/) · [**PROFILE**](https://github.com/atomicdjt) · [**ARCHITECTURE**](docs/ARCHITECTURE.md)
+
+</div>
+
+<br />
+
 # Validation Ledger
 
 [![CI](https://github.com/atomicdjt/validation-ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/atomicdjt/validation-ledger/actions/workflows/ci.yml)
