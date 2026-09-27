@@ -3,9 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
-import { Plus, Trash2, Link } from 'lucide-react';
+import { Plus, Trash2, Link as LinkIcon, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Decision } from '../db/models';
 import { deleteDecisionCascade } from '../db/operations';
+import { createDecisionWithGovernance } from '../services/governance';
+import { createDecisionPackage } from '../services/decisionPackage';
 import { analytics } from '../services/analytics';
 
 export function Decisions() {
@@ -65,20 +68,7 @@ export function Decisions() {
         createdAt: Date.now(),
       };
 
-      await db.transaction('rw', db.decisions, db.hypothesisDecisionLinks, db.evidenceDecisionLinks, async () => {
-        await db.decisions.add(newDecision);
-        for (const hId of selectedHypotheses) {
-          await db.hypothesisDecisionLinks.add({
-            id: generateId(),
-            projectId: activeProjectId,
-            hypothesisId: hId,
-            decisionId: newDecision.id
-          });
-        }
-        for (const evidenceId of selectedEvidence) {
-          await db.evidenceDecisionLinks.add({ id: generateId(), projectId: activeProjectId, evidenceId, decisionId: newDecision.id });
-        }
-      });
+      await createDecisionWithGovernance(newDecision, selectedEvidence, selectedHypotheses, 'user', 'Initial decision creation');
       succeeded = true;
       analytics.track('decision_created', {
         confidence,
@@ -335,11 +325,33 @@ export function Decisions() {
                     {d.status}
                   </span>
                 </div>
-                <button onClick={() => handleDelete(d.id)} className="text-surface-400 hover:text-red-500 p-1 rounded" title="Delete Decision">
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex gap-1">
+                  <button onClick={async () => {
+                    const pkg = await createDecisionPackage(d.id);
+                    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `decision-package-${d.id}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }} className="text-surface-400 hover:text-primary-600 p-1 rounded" title="Export Decision Package">
+                    <Download size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(d.id)} className="text-surface-400 hover:text-red-500 p-1 rounded" title="Delete Decision">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-              <h3 className="font-semibold text-surface-900 text-lg mb-1 line-clamp-2">{d.title}</h3>
+              <Link to={`/decisions/${d.id}`} className="hover:underline">
+                <h3 className="font-semibold text-primary-700 text-lg mb-1 line-clamp-2">{d.title}</h3>
+              </Link>
+              {d.needsAttention && (
+                <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800 flex items-start gap-2">
+                  <span className="font-bold">Needs Attention:</span>
+                  <span>Underlying evidence has been superseded, contradicted, or invalidated since this decision was made.</span>
+                </div>
+              )}
               {d.description && <p className="text-sm text-surface-700 mb-3 font-medium line-clamp-3">{d.description}</p>}
               {d.reason && (
                 <div className="mb-3">
@@ -369,6 +381,16 @@ export function Decisions() {
                 <div className="mb-3 p-2 bg-surface-50 border border-surface-200 rounded text-sm text-surface-700">
                   <span className="font-semibold block text-xs uppercase text-surface-500 mb-1">Outcome</span>
                   <span className="block max-h-32 overflow-y-auto">{d.outcome}</span>
+                </div>
+              )}
+              {d.integrityHash && (
+                <div className="mb-3 text-xs text-surface-400 font-mono bg-surface-50 p-2 rounded truncate" title="Tamper-evident integrity hash">
+                  Hash: {d.integrityHash}
+                </div>
+              )}
+              {d.integrityHash && (
+                <div className="mb-3 text-xs text-surface-400 font-mono bg-surface-50 p-2 rounded truncate" title="Tamper-evident integrity hash">
+                  Hash: {d.integrityHash}
                 </div>
               )}
 
@@ -419,8 +441,9 @@ function DecisionLinks({ decisionId }: { decisionId: string }) {
 
   return (
     <div className="flex items-center gap-1 text-surface-500" title={`${links.hypotheses.length} hypotheses and ${links.evidence.length} evidence signals linked`}>
-      <Link size={14} />
+      <LinkIcon size={14} />
       <span className="text-xs">{links.hypotheses.length + links.evidence.length}</span>
     </div>
   );
 }
+

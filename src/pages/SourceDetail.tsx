@@ -125,6 +125,20 @@ function EvidenceEditor({ item, hypotheses, onUpdate, onDelete }: EvidenceEditor
           <span className="field-label">Research Notes</span>
           <textarea value={item.notes} onChange={(event) => void onUpdate(item.id, { notes: event.target.value })} className="field-control min-h-20 resize-y" placeholder="Optional context, caveats, or follow-up…" />
         </label>
+        
+        <label>
+          <span className="field-label">Evidence Validity</span>
+          <select value={item.validityState || 'active'} onChange={(event) => void onUpdate(item.id, { validityState: event.target.value as EvidenceSignal['validityState'] })} className="field-control">
+            <option value="active">Active</option>
+            <option value="superseded">Superseded</option>
+            <option value="disputed">Disputed</option>
+            <option value="withdrawn">Withdrawn</option>
+            <option value="contradicted">Contradicted</option>
+            <option value="outdated">Outdated</option>
+            <option value="unverifiable">Unverifiable</option>
+          </select>
+          <p className="mt-1 text-xs text-surface-500">Changing this will flag downstream decisions for review.</p>
+        </label>
       </div>
     </article>
   );

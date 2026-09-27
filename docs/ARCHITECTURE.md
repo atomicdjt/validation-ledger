@@ -41,6 +41,7 @@ erDiagram
     PROJECT ||--o{ SOURCE : "has"
     PROJECT ||--o{ HYPOTHESIS : "has"
     PROJECT ||--o{ DECISION : "has"
+    PROJECT ||--o{ REVISION : "has"
 
     SEGMENT ||--o{ SOURCE : "contextualizes"
     SOURCE ||--o{ EVIDENCE_SIGNAL : "contains"
@@ -48,6 +49,11 @@ erDiagram
 
     DECISION }o--o{ EVIDENCE_SIGNAL : "informed by"
     DECISION }o--o{ HYPOTHESIS : "resolves"
+    
+    DECISION ||--o{ ASSUMPTION : "has"
+    DECISION ||--o{ ALTERNATIVE : "considers"
+    DECISION ||--o{ RISK : "faces"
+    DECISION ||--o{ REVIEW : "undergoes"
 ```
 
 ## Traceability Design

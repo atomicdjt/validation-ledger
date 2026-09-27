@@ -7,7 +7,12 @@ import {
   Hypothesis,
   Decision,
   EvidenceDecisionLink,
-  HypothesisDecisionLink
+  HypothesisDecisionLink,
+  Assumption,
+  Alternative,
+  Risk,
+  Review,
+  Revision
 } from './models';
 
 export class ValidationLedgerDatabase extends Dexie {
@@ -19,6 +24,12 @@ export class ValidationLedgerDatabase extends Dexie {
   decisions!: Table<Decision, string>;
   evidenceDecisionLinks!: Table<EvidenceDecisionLink, string>;
   hypothesisDecisionLinks!: Table<HypothesisDecisionLink, string>;
+  
+  assumptions!: Table<Assumption, string>;
+  alternatives!: Table<Alternative, string>;
+  risks!: Table<Risk, string>;
+  reviews!: Table<Review, string>;
+  revisions!: Table<Revision, string>;
 
   constructor() {
     super('ValidationLedgerDatabase');
@@ -76,6 +87,21 @@ export class ValidationLedgerDatabase extends Dexie {
         decision.validationMethod = decision.validationMethod || '';
         decision.outcome = decision.outcome || '';
       });
+    });
+    this.version(4).stores({
+      projects: 'id, createdAt, updatedAt',
+      segments: 'id, projectId, priority',
+      sources: 'id, projectId, segmentId, date, type',
+      evidenceSignals: 'id, projectId, sourceId, segmentId, hypothesisId, classification, confidence',
+      hypotheses: 'id, projectId, category, importance, status, confidenceScore',
+      decisions: 'id, projectId, createdAt, status',
+      evidenceDecisionLinks: 'id, projectId, evidenceId, decisionId',
+      hypothesisDecisionLinks: 'id, projectId, hypothesisId, decisionId',
+      assumptions: 'id, projectId, decisionId',
+      alternatives: 'id, projectId, decisionId',
+      risks: 'id, projectId, decisionId',
+      reviews: 'id, projectId, decisionId',
+      revisions: 'id, projectId, entityType, entityId'
     });
   }
 }

@@ -44,8 +44,8 @@ export interface EvidenceSignal {
   quantitativeValue?: number;
   notes: string;
   createdAt: number;
-  /** Missing legacy provenance is deliberately treated as unverified by scoring and UI. */
   provenanceState: ProvenanceState;
+  validityState?: 'active' | 'superseded' | 'disputed' | 'withdrawn' | 'contradicted' | 'outdated' | 'unverifiable';
 }
 
 export type EvidenceRelationship = EvidenceSignal['relationship'];
@@ -86,12 +86,15 @@ export interface Decision {
   reason: string;
   confidence: 'low' | 'moderate' | 'high';
   status: 'proposed' | 'accepted' | 'rejected' | 'reverted' | 'validated';
+  // Legacy fields, keeping them for backward compatibility, but we will use the new entities
   alternatives: string;
   assumptions: string;
   validationMethod: string;
   outcome: string;
   createdAt: number;
   reviewDate?: number;
+  integrityHash?: string;
+  needsAttention?: boolean;
 }
 
 export interface EvidenceDecisionLink {
@@ -106,4 +109,54 @@ export interface HypothesisDecisionLink {
   projectId: string;
   hypothesisId: string;
   decisionId: string;
+}
+
+export interface Assumption {
+  id: string;
+  projectId: string;
+  decisionId: string;
+  statement: string;
+  status: 'unresolved' | 'validated' | 'invalidated';
+}
+
+export interface Alternative {
+  id: string;
+  projectId: string;
+  decisionId: string;
+  title: string;
+  description: string;
+  status: 'considered' | 'rejected' | 'selected';
+}
+
+export interface Risk {
+  id: string;
+  projectId: string;
+  decisionId: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  status: 'unassessed' | 'mitigated' | 'accepted';
+}
+
+export interface Review {
+  id: string;
+  projectId: string;
+  decisionId: string;
+  reviewer: string;
+  status: 'requested' | 'approved' | 'approved_with_reservations' | 'rejected' | 'needs_revision';
+  comments: string;
+  date: number;
+}
+
+export interface Revision {
+  id: string;
+  projectId: string;
+  entityType: 'decision' | 'evidence' | 'hypothesis' | 'assumption' | 'alternative' | 'risk' | 'review';
+  entityId: string;
+  timestamp: number;
+  actor: string;
+  previousState: string;
+  newState: string;
+  reason: string;
+  hash: string;
+  previousHash: string;
 }

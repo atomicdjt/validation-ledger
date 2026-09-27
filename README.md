@@ -5,7 +5,7 @@
 **[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ```text
-SOURCE  →  EVIDENCE  →  HYPOTHESIS  →  DECISION (with alternatives, assumptions, and outcomes)
+SOURCE  →  EVIDENCE  →  CLAIM  →  DECISION (with alternatives, assumptions, constraints, and risks)
                      ↘ COUNTEREVIDENCE
 ```
 
@@ -31,7 +31,7 @@ Validation Ledger is an MIT-licensed, local-first product-discovery workspace fo
 
 ## Product tour
 
-The workspace includes project and hypothesis management, a source library, source-level evidence extraction, an evidence matrix, decision tracking, reporting, backup controls, and guided demo data.
+The workspace includes project and claim and assumption management, a source library, source-level evidence extraction, an evidence matrix, decision tracking, reporting, backup controls, and guided demo data.
 
 <p align="center">
   <img src="docs/images/source-mobile.png" alt="Validation Ledger source detail on mobile" width="380" />
@@ -75,7 +75,7 @@ Open the local URL shown by Vite. No environment variable is required for the co
 
 ## Optional anonymous telemetry
 
-Telemetry is off unless `VITE_POSTHOG_KEY` is configured at build time (and `VITE_POSTHOG_HOST` is optional). It records only these coarse completion events: application load; project, source, hypothesis, manual-evidence, and decision creation; source-note save; and backup export/import. Allowed properties are limited to type, enum, boolean, and link-count metadata.
+Telemetry is off unless `VITE_POSTHOG_KEY` is configured at build time (and `VITE_POSTHOG_HOST` is optional). It records only these coarse completion events: application load; project, source, claim, manual-evidence, and decision creation; source-note save; and backup export/import. Allowed properties are limited to type, enum, boolean, and link-count metadata.
 
 It never sends source notes, evidence or claim text, user-provided identifiers, URLs, backup content, local database state, API keys, or user identity. Application events use finite structural values only. PostHog still receives the public project token in the transport request and may attach anonymous SDK identifiers and library/timestamp envelope fields required for ingestion; browser, device, URL/referrer, IP-derived location, and session-recording fields are disabled or blacklisted. Missing or failed telemetry configuration cannot affect core product behavior.
 
@@ -116,6 +116,7 @@ Only excerpts that match the saved source exactly or through conservative whites
 The technical evidence for the project is documented rather than implied:
 
 - [Architecture and system boundaries](docs/ARCHITECTURE.md)
+- [Governance Model](docs/GOVERNANCE_MODEL.md)
 - [Release checks and current limitations](docs/VALIDATION.md)
 - [Security and responsible key handling](SECURITY.md)
 - [Contribution workflow](CONTRIBUTING.md)

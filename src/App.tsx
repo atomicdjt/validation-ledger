@@ -9,6 +9,7 @@ const Sources = lazy(() => import('./pages/Sources').then((module) => ({ default
 const SourceDetail = lazy(() => import('./pages/SourceDetail').then((module) => ({ default: module.SourceDetail })));
 const Hypotheses = lazy(() => import('./pages/Hypotheses').then((module) => ({ default: module.Hypotheses })));
 const Decisions = lazy(() => import('./pages/Decisions').then((module) => ({ default: module.Decisions })));
+const DecisionDetail = lazy(() => import('./pages/DecisionDetail').then((module) => ({ default: module.DecisionDetail })));
 const Report = lazy(() => import('./pages/Report').then((module) => ({ default: module.Report })));
 const Settings = lazy(() => import('./pages/Settings').then((module) => ({ default: module.Settings })));
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="/sources/:id" element={<SourceDetail />} />
             <Route path="/hypotheses" element={<Hypotheses />} />
             <Route path="/decisions" element={<Decisions />} />
+            <Route path="/decisions/:id" element={<DecisionDetail />} />
             <Route path="/report" element={<Report />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

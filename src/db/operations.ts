@@ -1,3 +1,4 @@
+import { createRevision, flagDownstreamImpact } from '../services/governance';
 import { db } from './db';
 import type { EvidenceSignal, EvidenceRelationship, Source } from './models';
 import { generateId } from '../utils/id';
@@ -38,30 +39,70 @@ export async function updateSourceTextWithEvidenceRevalidation(sourceId: string,
 
 /** Updates evidence using the persisted source as the only provenance authority. */
 export async function updateEvidenceWithCanonicalProvenance(evidenceId: string, updates: Partial<EvidenceSignal>): Promise<void> {
-  await db.transaction('rw', [db.sources, db.evidenceSignals, db.hypotheses], async () => {
-    const current = await db.evidenceSignals.get(evidenceId);
-    if (!current) throw new Error('Evidence signal not found');
-    const source = await db.sources.get(current.sourceId);
-    if (!source) throw new Error('Evidence source not found');
-    const nextHypothesisId = updates.hypothesisId === undefined ? current.hypothesisId : updates.hypothesisId;
-    if (nextHypothesisId) {
-      const hypothesis = await db.hypotheses.get(nextHypothesisId);
-      if (!hypothesis || hypothesis.projectId !== current.projectId) throw new Error('Evidence must link to a hypothesis in the same project');
-    }
-    const excerpt = typeof updates.exactExcerpt === 'string' ? updates.exactExcerpt : current.exactExcerpt;
-    const provenance = verifyExcerptProvenance(source.rawText, excerpt);
-    const relationship: EvidenceRelationship = nextHypothesisId ? (updates.relationship ?? current.relationship) : 'neutral';
-    await db.evidenceSignals.update(evidenceId, {
-      ...updates,
-      hypothesisId: nextHypothesisId,
-      relationship,
-      exactExcerpt: provenance.matchedExcerpt ?? excerpt,
-      provenanceState: provenance.state,
-      isDirect: (updates.isDirect ?? current.isDirect) && provenance.state !== 'unverified',
-    });
+  const current = await db.evidenceSignals.get(evidenceId);
+  if (!current) throw new Error('Evidence signal not found');
+  const source = await db.sources.get(current.sourceId);
+  if (!source) throw new Error('Evidence source not found');
+  
+  const nextHypothesisId = updates.hypothesisId === undefined ? current.hypothesisId : updates.hypothesisId;
+  if (nextHypothesisId) {
+    const hypothesis = await db.hypotheses.get(nextHypothesisId);
+    if (!hypothesis || hypothesis.projectId !== current.projectId) throw new Error('Evidence must link to a hypothesis in the same project');
+  }
+  
+  const excerpt = typeof updates.exactExcerpt === 'string' ? updates.exactExcerpt : current.exactExcerpt;
+  const provenance = verifyExcerptProvenance(source.rawText, excerpt);
+  const relationship: EvidenceRelationship = nextHypothesisId ? (updates.relationship ?? current.relationship) : 'neutral';
+  
+  const nextState = {
+    ...updates,
+    hypothesisId: nextHypothesisId,
+    relationship,
+    exactExcerpt: provenance.matchedExcerpt ?? excerpt,
+    provenanceState: provenance.state,
+    isDirect: (updates.isDirect ?? current.isDirect) && provenance.state !== 'unverified',
+  };
+
+  const { hashData } = await import('../services/integrity');
+  const previousRevisions = await db.revisions.where('entityId').equals(evidenceId).sortBy('timestamp');
+  const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+  
+  const hash = await hashData({
+    entityId: evidenceId,
+    timestamp: Date.now(),
+    newState: { ...current, ...nextState },
+    previousHash
+  });
+
+  const { generateId } = await import('../utils/id');
+  const revision = {
+    id: generateId(),
+    projectId: current.projectId,
+    entityType: 'evidence' as const,
+    entityId: evidenceId,
+    timestamp: Date.now(),
+    actor: 'system',
+    previousState: JSON.stringify(current),
+    newState: JSON.stringify({ ...current, ...nextState }),
+    reason: 'Evidence updated',
+    hash,
+    previousHash,
+  };
+
+  await db.transaction('rw', [db.sources, db.evidenceSignals, db.hypotheses, db.revisions], async () => {
+    await db.evidenceSignals.update(evidenceId, nextState);
+    await db.revisions.add(revision);
     await updateHypothesisScoresInTransaction([current.hypothesisId, nextHypothesisId]);
   });
+
+  if (updates.validityState && updates.validityState !== current.validityState) {
+    if (['superseded', 'contradicted', 'disputed', 'outdated', 'withdrawn', 'unverifiable'].includes(updates.validityState)) {
+      const { flagDownstreamImpact } = await import('../services/governance');
+      await flagDownstreamImpact(evidenceId);
+    }
+  }
 }
+
 
 export async function addManualEvidence(source: Source): Promise<EvidenceSignal> {
   const evidence: EvidenceSignal = {
