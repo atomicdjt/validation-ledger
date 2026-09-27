@@ -13,6 +13,11 @@ const complete = () => ({
   decisions:[{id:'d',projectId:'p',title:'D',description:'Summary',reason:'R',confidence:'moderate',status:'accepted',alternatives:'Alternative B',assumptions:'Users will adopt this',validationMethod:'Run a usability session',outcome:'Validated by five users',createdAt:7,reviewDate:8}],
   evidenceDecisionLinks:[{id:'ed',projectId:'p',evidenceId:'e',decisionId:'d'}],
   hypothesisDecisionLinks:[{id:'hd',projectId:'p',hypothesisId:'h',decisionId:'d'}],
+  revisions: [{id:'rev', projectId:'p', entityType: 'decision', entityId: 'd', timestamp: 9, actor: 'user', previousState: '{}', newState: '{}', reason: '', hash: '', previousHash: ''}],
+  assumptions: [{id:'a', projectId:'p', decisionId:'d', statement:'assumption', status:'unresolved'}],
+  alternatives: [{id:'alt', projectId:'p', decisionId:'d', title:'alt1', description:'', status:'considered'}],
+  risks: [{id:'r', projectId:'p', decisionId:'d', description:'risk', severity:'low', status:'unassessed'}],
+  reviews: [{id:'revw', projectId:'p', decisionId:'d', reviewer:'user', status:'requested', comments:'', date:10}],
 });
 
 beforeEach(async()=>{await db.delete(); await db.open();});

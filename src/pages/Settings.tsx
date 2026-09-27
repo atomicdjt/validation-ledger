@@ -4,6 +4,7 @@ import { exportDatabase, importDatabase } from '../db/exportImport';
 import { useStore } from '../store/useStore';
 import { analytics } from '../services/analytics';
 import { getGeminiApiKey, setGeminiApiKey } from '../services/apiKeySession';
+import { verifyLedgerIntegrity, type VerificationResult } from '../services/integrity';
 
 export function Settings() {
   const setActiveProject = useStore((state) => state.setActiveProject);
@@ -13,6 +14,8 @@ export function Settings() {
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const handleSaveApiKey = () => {
     const value = apiKey.trim();
@@ -45,6 +48,19 @@ export function Settings() {
       setImportError(caughtError instanceof Error ? caughtError.message : 'Import failed.');
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handleVerifyIntegrity = async () => {
+    setIsVerifying(true);
+    setVerificationResult(null);
+    try {
+      const result = await verifyLedgerIntegrity();
+      setVerificationResult(result);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -99,6 +115,45 @@ export function Settings() {
           </div>
         </div>
       </section>
+      <section className="panel overflow-hidden mt-6">
+        <div className="panel-header">
+          <div className="flex items-center gap-2.5"><ShieldCheck size={19} className="text-primary-700" /><h2 className="font-semibold text-surface-950">Ledger Integrity</h2></div>
+        </div>
+        <div className="p-5 sm:p-6">
+          <p className="text-sm leading-6 text-surface-600 mb-4">
+            Verify the cryptographic hash chain of all governed entities in the local database. This ensures no revisions have been tampered with or corrupted.
+          </p>
+          <button 
+            type="button" 
+            onClick={() => void handleVerifyIntegrity()} 
+            disabled={isVerifying}
+            className="button-secondary"
+          >
+            {isVerifying ? 'Verifying...' : 'Verify Integrity'}
+          </button>
+          
+          {verificationResult && (
+            <div className={`mt-4 p-4 rounded-lg text-sm ${verificationResult.valid ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              {verificationResult.valid ? (
+                <>
+                  <p className="font-semibold mb-1">Integrity verified</p>
+                  <p>{verificationResult.chainsVerified} revision chains verified</p>
+                  <p>0 failures across {verificationResult.revisionsVerified} revisions</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold mb-1">Integrity failure detected</p>
+                  <p>Entity: {(verificationResult as any).entityId}</p>
+                  <p>Revision: {(verificationResult as any).revisionId}</p>
+                  <p>Failure: {(verificationResult as any).reason === 'HASH_MISMATCH' ? 'stored hash does not match canonical content' : (verificationResult as any).reason}</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
+
+

@@ -1,6 +1,6 @@
 # Validation Ledger
 
-**Turn customer conversations into traceable product decisions—without losing the chain of reasoning.**
+**A local-first decision-governance system for preserving the reasoning, evidence, assumptions, risks, alternatives, and review history behind consequential decisions.**
 
 **[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
@@ -13,7 +13,7 @@ SOURCE  →  EVIDENCE  →  CLAIM  →  DECISION (with alternatives, assumptions
 
 *Animated conceptual tour of the documented evidence model; this is not a fabricated live screen recording.*
 
-Validation Ledger is an MIT-licensed, local-first product-discovery workspace for product managers, UX researchers, and founders who need to preserve the chain from raw customer material to an explicit decision.
+Validation Ledger is an MIT-licensed, local-first workspace for product managers, researchers, and technical leaders who need to preserve the chain from raw material to an explicit decision. While product discovery is a primary use case, it serves any domain requiring traceable decision governance.
 
 ### Why it is different
 
@@ -130,3 +130,4 @@ The scoring system is intentionally heuristic. It structures judgment; it does n
 ## License
 
 Validation Ledger is open source under the [MIT License](LICENSE). Copyright © 2026 atomicdjt.
+

@@ -91,7 +91,7 @@ export function Hypotheses() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this hypothesis? Evidence will remain but be unlinked, and decision links will be removed.')) return;
+    if (!window.confirm('Delete this claim? Evidence will remain but be unlinked, and decision links will be removed.')) return;
     await deleteHypothesisCascade(id);
   };
 
@@ -107,21 +107,21 @@ export function Hypotheses() {
     <div className="page-shell">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="page-title">Hypotheses</h1>
+          <h1 className="page-title">Claims</h1>
           <p className="page-description">Track the assumptions that must survive contact with real customer evidence.</p>
         </div>
         <button type="button" onClick={isEditing ? resetForm : openCreate} className={isEditing ? 'button-secondary' : 'button-primary'}>
           {isEditing ? <X size={18} /> : <Plus size={18} />}
-          {isEditing ? 'Cancel' : 'Add Hypothesis'}
+          {isEditing ? 'Cancel' : 'Add Claim'}
         </button>
       </header>
 
       {isEditing ? (
         <section className="panel p-5 sm:p-6">
-          <h2 className="text-lg font-bold text-surface-950">{editingId ? 'Edit hypothesis' : 'New hypothesis'}</h2>
+          <h2 className="text-lg font-bold text-surface-950">{editingId ? 'Edit claim' : 'New claim'}</h2>
           <form onSubmit={handleSubmit} className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto] lg:items-end">
             <label>
-              <span className="field-label">Hypothesis statement</span>
+              <span className="field-label">Claim statement</span>
               <textarea required value={statement} onChange={(event) => setStatement(event.target.value)} className="field-control min-h-24 resize-y" placeholder="What must be true for this product to work?" autoFocus />
             </label>
             <label>
@@ -137,7 +137,7 @@ export function Hypotheses() {
                 <option value="critical">Critical · Make or break</option>
               </select>
             </label>
-            <button type="submit" disabled={isSubmitting} className="button-primary w-full sm:w-auto">{editingId ? 'Save Changes' : 'Add Hypothesis'}</button>
+            <button type="submit" disabled={isSubmitting} className="button-primary w-full sm:w-auto">{editingId ? 'Save Changes' : 'Add Claim'}</button>
           </form>
         </section>
       ) : null}
@@ -179,3 +179,4 @@ export function Hypotheses() {
     </div>
   );
 }
+

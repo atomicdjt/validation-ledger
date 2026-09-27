@@ -246,10 +246,10 @@ export function Decisions() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 mb-2">Link Hypotheses</label>
+              <label className="block text-sm font-medium text-surface-700 mb-2">Link Claims</label>
               <div className="max-h-48 overflow-y-auto border border-surface-200 rounded-md p-2 space-y-1">
                 {hypotheses?.length === 0 && (
-                  <div className="text-sm text-surface-500 p-2">No hypotheses available to link.</div>
+                  <div className="text-sm text-surface-500 p-2">No claims available to link.</div>
                 )}
                 {hypotheses?.map(h => (
                   <label key={h.id} className="flex items-start gap-2 p-2 hover:bg-surface-50 rounded cursor-pointer">
@@ -446,4 +446,5 @@ function DecisionLinks({ decisionId }: { decisionId: string }) {
     </div>
   );
 }
+
 

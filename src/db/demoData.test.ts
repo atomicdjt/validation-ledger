@@ -10,39 +10,34 @@ beforeEach(async () => {
 });
 
 describe('guided demo data', () => {
-  it('includes a synthetic mixed-evidence project with traceable citations', async () => {
+  it('includes a synthetic project with traceable citations', async () => {
     await injectDemoData();
 
     const project = (await db.projects.toArray()).find(
-      (candidate) => candidate.name === 'Evidence Review Workspace',
+      (candidate) => candidate.name === 'AI Autonomous Agent Platform',
     );
     expect(project).toBeDefined();
 
     const sources = await db.sources.where('projectId').equals(project!.id).toArray();
     const evidence = await db.evidenceSignals.where('projectId').equals(project!.id).toArray();
-    const hypothesis = await db.hypotheses.where('projectId').equals(project!.id).first();
+    const hypotheses = await db.hypotheses.where('projectId').equals(project!.id).toArray();
     const decisions = await db.decisions.where('projectId').equals(project!.id).toArray();
 
-    expect(new Set(sources.map((source) => source.participantId)).size).toBe(3);
-    expect(evidence).toHaveLength(3);
-    expect(evidence.some((signal) => signal.classification === 'willingness_to_pay' && signal.relationship === 'supports')).toBe(true);
-    expect(evidence.some((signal) => signal.relationship === 'contradicts')).toBe(true);
+    expect(new Set(sources.map((source) => source.participantId)).size).toBe(2);
+    expect(evidence).toHaveLength(2);
+    expect(evidence.some((signal) => signal.relationship === 'supports')).toBe(true);
     expect(evidence.every((signal) => sources.find((source) => source.id === signal.sourceId)?.rawText.includes(signal.exactExcerpt))).toBe(true);
 
-    const analysis = calculateScore(evidence);
-    expect(analysis.status).toBe('mixed');
-    expect(hypothesis).toMatchObject({ status: 'mixed', confidenceScore: analysis.score });
     expect(decisions).toHaveLength(1);
     expect(decisions[0]).toMatchObject({
-      title: 'Run a bounded workflow evaluation before recurring purchase',
-      status: 'proposed',
-      confidence: 'low',
-      outcome: 'Pending external evaluation; synthetic demo only.'
+      title: 'Implement Risk-Tiered Execution Architecture',
+      status: 'accepted',
+      confidence: 'high',
     });
 
     const decisionId = decisions[0].id;
-    expect(await db.hypothesisDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(1);
-    expect(await db.evidenceDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(3);
+    expect(await db.hypothesisDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(2);
+    expect(await db.evidenceDecisionLinks.where('decisionId').equals(decisionId).count()).toBe(2);
   });
 });
 

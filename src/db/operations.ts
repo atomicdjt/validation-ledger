@@ -63,16 +63,24 @@ export async function updateEvidenceWithCanonicalProvenance(evidenceId: string, 
     isDirect: (updates.isDirect ?? current.isDirect) && provenance.state !== 'unverified',
   };
 
-  const { hashData } = await import('../services/integrity');
+  const { hashRevision, buildRevisionHashPayload } = await import('../services/integrity');
   const previousRevisions = await db.revisions.where('entityId').equals(evidenceId).sortBy('timestamp');
   const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
   
-  const hash = await hashData({
-    entityId: evidenceId,
-    timestamp: Date.now(),
-    newState: { ...current, ...nextState },
+  const timestamp = Date.now();
+  const payload = buildRevisionHashPayload(
+    'evidence',
+    evidenceId,
+    current.projectId,
+    timestamp,
+    'system',
+    current,
+    { ...current, ...nextState },
+    'Evidence updated',
     previousHash
-  });
+  );
+
+  const hash = await hashRevision(payload);
 
   const { generateId } = await import('../utils/id');
   const revision = {
@@ -80,7 +88,7 @@ export async function updateEvidenceWithCanonicalProvenance(evidenceId: string, 
     projectId: current.projectId,
     entityType: 'evidence' as const,
     entityId: evidenceId,
-    timestamp: Date.now(),
+    timestamp,
     actor: 'system',
     previousState: JSON.stringify(current),
     newState: JSON.stringify({ ...current, ...nextState }),
