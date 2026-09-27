@@ -1,5 +1,3 @@
-# Validation Ledger: Final Hardening Report
-
 ## A. Critical Integrity Bug
 We identified and resolved a critical integrity bug where non-deterministic JSON serialization and floating-point timestamp discrepancies were causing intermittent hash chain mismatches. This was leading to false-positive tampering alerts and undermining the core integrity engine of the ledger.
 
