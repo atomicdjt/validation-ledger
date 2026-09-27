@@ -1,60 +1,46 @@
-# Validation Ledger: Final Deliverable Report
+# Validation Ledger: Final Hardening Report
 
-## A. Executive Summary
-Validation Ledger is a local-first, statically hosted single-page application designed for rigorous product governance. It transforms qualitative customer evidence into traceable, defensible product decisions. By strictly defining the relationships between Evidence, Claims, Assumptions, Risks, Alternatives, and Decisions, it mitigates cognitive biases and ensures that product direction is grounded in verifiable data, not just intuition.
+## A. Critical Integrity Bug
+We identified and resolved a critical integrity bug where non-deterministic JSON serialization and floating-point timestamp discrepancies were causing intermittent hash chain mismatches. This was leading to false-positive tampering alerts and undermining the core integrity engine of the ledger.
 
-## B. Architecture Overview
-The application follows a local-first architecture using React 19, TypeScript, and Vite. There is no backend server. All persistent data is stored securely in the user's browser using IndexedDB (via Dexie.js). Ephemeral interface state is managed by Zustand. The design prioritizes privacy, auditability, and speed, with optional cloud integration strictly limited to user-initiated AI extraction using an explicitly provided API key.
+## B. Canonicalization Fix
+To fix the serialization issues, we implemented a strict deterministic canonical JSON serialization method. This ensures that the cryptographic hashes generated for decision payloads are completely consistent, regardless of object key insertion order, browser engine nuances, or white-space formatting differences.
 
-## C. Data Model & Schema
-The relational data model represents the logical steps of product discovery:
-*   **Projects, Segments, Sources:** Organize the raw inputs.
-*   **Evidence:** Extracted, atomic insights with explicit `provenanceState`.
-*   **Claims:** Testable statements validated by Evidence.
-*   **Decisions:** Impactful choices linked to Evidence and Claims, supported by Assumptions, Constraints, Risks, and Alternatives.
-*   **Reviews & Revisions:** Immutable ledger entries for auditability and governance.
+## C. Hash Contract
+We established a strict hash contract utilizing the browser's native WebCrypto API (SHA-256). The contract strictly defines that the hash is computed over the canonicalized representation of the payload, including Entity Type, Entity ID, Project ID, Timestamp, Actor, Previous State, New State, Reason for change, and the Previous Revision Hash.
 
-## D. State Management
-*   **Persistent Domain State (Dexie):** The source of truth for the product governance ledger. Changes trigger reactive updates (`useLiveQuery`) across the interface.
-*   **Ephemeral UI State (Zustand):** Manages non-critical workspace preferences (e.g., active project ID, view modes) to separate interface mechanics from domain logic.
+## D. Chain Model
+The application now enforces a rigorous local hash chain model. Every new Decision Revision inherently includes the cryptographic hash of its immediate predecessor. This creates an unbroken chronological chain; any direct modification to a historical record will invalidate the hashes of all subsequent records in the chain.
 
-## E. Integrity & Provenance
-Evidence integrity is a core tenet. The `provenanceState` guarantees that an `exactExcerpt` actually matches a substring in the parent `Source.rawText`. If the source text is altered, the system degrades the state to `unverified`, surfacing a warning. The integration of cryptographic hashing (WebCrypto) on Decisions and Revisions further protects against silent tampering.
+## E. Integrity Verification
+We integrated a robust integrity verification mechanism accessible via the Settings view. This mechanism traverses the local IndexedDB, re-calculating the entire hash chain from the origin block and comparing it against the stored hashes to surface any tampering to the user immediately.
 
-## F. Security & Cryptography
-*   **Local-First:** Core records never leave the browser.
-*   **WebCrypto:** Used to generate integrity hashes for Revisions, ensuring an auditable, tamper-evident trail for governance.
-*   **API Keys:** User-provided Gemini API keys are stored locally and only used for direct requests to Google's API. No proxy servers are involved.
+## F. Adversarial Tests
+The Vitest testing suite was expanded to include specialized adversarial tests. These tests deliberately simulate malicious modifications to the IndexedDB storage—bypassing the application logic—to guarantee that the verification system correctly identifies tampering, missing links, and corrupted data.
 
-## G. AI Integration
-The optional Gemini integration acts as an assistant, not an authority. It extracts potential Evidence from Sources but requires human review before admission into the ledger. Output is rigorously typed and validated before reaching the UI.
+## G. Decision Package Integrity
+The governance model was tightened to ensure Decision Package Integrity. Any change to a Decision or its tightly bound artifacts—such as Assumptions, Alternatives, Risks, and Reviews—now deterministically generates a new Revision and advances the hash chain.
 
-## H. UI/UX & Component Design
-The interface is built with Tailwind CSS v4 and Lucide React icons. It features a clear, professional layout focused on density and readability, appropriate for a serious enterprise tool. Components are modularized (e.g., `src/components/EvidenceMatrix`, `src/components/DecisionForm`).
+## H. Backup Import Safety
+We hardened the `.vlbackup` export and import functionality. The system now strictly validates the integrity of the hash chain upon importing a backup file. If an imported snapshot contains a corrupted chain or evidence of tampering, the import process securely aborts, preventing ingestion of compromised data.
 
-## I. Export & Interoperability
-Users have full ownership of their data. The entire IndexedDB state can be exported to a standard JSON file (`.vlbackup`) and imported to restore the workspace. Export now also includes comprehensive CSV and PDF formats (via libraries or structured data mapping) for stakeholder reporting.
+## I. Concurrency Verification
+We addressed potential race conditions and concurrency vulnerabilities during rapid, successive revisions. The system now guarantees strict sequential processing of hash chain updates, locking the previous hash and timestamp at the precise moment of commit to ensure the chain cannot be branched or overwritten.
 
-## J. Testing & QA
-Quality is assured through Vitest for unit testing (including complex scoring logic and provenance validation) and Playwright for end-to-end user flows. Static analysis is enforced via Oxlint and TypeScript strict mode.
+## J. Public Claim Corrections
+We audited and updated all public claims, including the `INTEGRITY_MODEL.md` documentation, to accurately reflect the system's capabilities. We explicitly clarified that raw Evidence and Claims (Hypotheses) remain mutable, and that the immutability guarantees apply strictly to the Decision governance hash chain.
 
-## K. Accessibility
-The application adheres to WCAG guidelines, utilizing semantic HTML, proper ARIA labels, and keyboard navigation support, ensuring the tool is usable by all team members.
+## K. Product Positioning
+The product's positioning was refined. Validation Ledger is correctly positioned as a local-first, tamper-evident governance tool, rather than an unconditionally immutable, distributed blockchain. We explicitly state the bounds of our security guarantees regarding local storage.
 
-## L. Demo Data & Onboarding
-The system generates highly realistic, professional demo data representing real-world use cases (e.g., Product Governance, Enterprise B2B SaaS, AI Infrastructure) to immediately demonstrate the value of the rigorous evidence model to new users.
+## L. Test Results
+All quality assurance gates have passed. The expanded Vitest unit testing suite (including canonical serialization and adversarial tampering) and Playwright E2E tests for core user flows execute successfully without failures. Static analysis via Oxlint and TypeScript strict mode enforces codebase quality.
 
-## M. Deployment & Hosting
-Validation Ledger is compiled to static assets via Vite and can be hosted on any static file server or CDN (e.g., Vercel, Netlify, GitHub Pages). The build process is deterministic and fully automated via GitHub Actions.
+## M. Production Build
+The Vite production build is stable, deterministic, and fully optimized. All assets compile correctly, and the build process is automated via GitHub Actions, ready to be deployed to any static file server or CDN.
 
-## N. Known Limitations
-*   As a local-first application, real-time multi-user collaboration is not natively supported without exporting/importing data or integrating a CRDT-based sync layer (e.g., Yjs).
-*   Storage capacity is limited by the browser's IndexedDB quota (typically generous but not infinite).
+## N. Remaining Limitations
+As detailed in the Integrity Model, the system operates entirely within the local browser's IndexedDB. There is no distributed consensus mechanism. A highly sophisticated adversary with access to the local database could theoretically modify historical data and recalculate the entire hash chain to hide their tracks, unless the ledger is cross-verified against a previously exported, secure snapshot. 
 
-## O. Future Roadmap
-*   **Sync & Collaborate:** Implement WebRTC or a lightweight sync server for real-time multiplayer editing.
-*   **Advanced Analytics:** Integrate more sophisticated natural language processing (NLP) to detect semantic duplicates or subtle contradictions automatically.
-*   **Integrations:** Connect with Jira, Linear, or GitHub to tie Decisions directly to engineering tickets.
-
-## P. Conclusion
-Validation Ledger successfully introduces a defensible, rigorous standard for product governance. By treating product discovery as a verifiable chain of evidence rather than a collection of disjointed notes, it empowers teams to make decisions that are auditable, rational, and aligned with market reality.
+## O. Release Readiness
+The final release-hardening pass on the Validation Ledger repository is complete. The core integrity engine is robust, canonical serialization is enforced, and the testing suite is comprehensive. The application meets all criteria for the final release.
