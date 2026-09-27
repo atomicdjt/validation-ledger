@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAnalytics, getAnalyticsConfig, initializeAnalytics } from './analytics';
+import { createAnalytics, getAnalyticsConfig, initializeAnalytics, sanitizeTelemetryEvent } from './analytics';
 
 describe('privacy-safe analytics', () => {
   it('does nothing when the public PostHog key is absent', () => {
@@ -70,6 +70,7 @@ describe('privacy-safe analytics', () => {
       capture_exceptions: false,
       capture_heatmaps: false,
       capture_performance: false,
+      before_send: sanitizeTelemetryEvent,
       property_blacklist: expect.arrayContaining(['$current_url', '$raw_user_agent', '$browser', '$os']),
     }));
     expect(client.capture).toHaveBeenCalledWith('application_loaded', { entry_point: 'direct', $geoip_disable: true });
@@ -87,6 +88,90 @@ describe('privacy-safe analytics', () => {
     const config = getAnalyticsConfig('https://us.i.posthog.com');
     expect(config.property_blacklist).toContain('$current_url');
     expect(config.property_blacklist).toContain('$raw_user_agent');
+  });
+
+  it('strips SDK-added context and arbitrary properties at the transport boundary', () => {
+    const sanitized = sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000001',
+      event: 'application_loaded',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        entry_point: 'direct',
+        $current_url: 'https://private.example/project/123',
+        $raw_user_agent: 'private-browser-detail',
+        $browser: 'Chrome',
+        $os: 'Windows',
+        $geoip_country_code: 'US',
+        arbitrary_value: 'must-not-leak',
+      },
+    });
+
+    expect(sanitized?.properties).toEqual({
+      token: 'phc_test',
+      distinct_id: 'anonymous-device',
+      $geoip_disable: true,
+      entry_point: 'direct',
+    });
+  });
+
+  it('drops an allowlisted event when an application property value is invalid', () => {
+    expect(sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000003',
+      event: 'application_loaded',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        entry_point: 'alice@example.com',
+      },
+    })).toBeNull();
+
+    expect(sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000004',
+      event: 'decision_created',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        confidence: 'high',
+        linked_evidence_count: -1,
+        linked_hypothesis_count: 2,
+      },
+    })).toBeNull();
+  });
+
+  it('retains valid application properties after transport validation', () => {
+    const sanitized = sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000005',
+      event: 'decision_created',
+      properties: {
+        token: 'phc_test',
+        distinct_id: 'anonymous-device',
+        $geoip_disable: true,
+        confidence: 'moderate',
+        linked_evidence_count: 2,
+        linked_hypothesis_count: 1,
+      },
+    });
+
+    expect(sanitized?.properties).toEqual({
+      token: 'phc_test',
+      distinct_id: 'anonymous-device',
+      $geoip_disable: true,
+      confidence: 'moderate',
+      linked_evidence_count: 2,
+      linked_hypothesis_count: 1,
+    });
+  });
+
+  it('drops events outside the application allowlist', () => {
+    expect(sanitizeTelemetryEvent({
+      uuid: '00000000-0000-4000-8000-000000000002',
+      event: 'telemetry_probe',
+      properties: { value: 'unexpected' },
+    })).toBeNull();
   });
 
   it('keeps the configured host on the CSP-allowlisted PostHog endpoint', () => {

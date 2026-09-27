@@ -1,26 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, Check, Download, Eye, EyeOff, KeyRound, Save, ShieldCheck, Upload } from 'lucide-react';
 import { exportDatabase, importDatabase } from '../db/exportImport';
 import { useStore } from '../store/useStore';
 import { analytics } from '../services/analytics';
+import { getGeminiApiKey, setGeminiApiKey } from '../services/apiKeySession';
 
 export function Settings() {
   const setActiveProject = useStore((state) => state.setActiveProject);
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => getGeminiApiKey() || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
-  useEffect(() => {
-    setApiKey(localStorage.getItem('validation_ledger_gemini_key') || '');
-  }, []);
-
   const handleSaveApiKey = () => {
     const value = apiKey.trim();
-    if (value) localStorage.setItem('validation_ledger_gemini_key', value);
-    else localStorage.removeItem('validation_ledger_gemini_key');
+    setGeminiApiKey(value);
     setIsSaved(true);
     window.setTimeout(() => setIsSaved(false), 1800);
   };
@@ -66,7 +62,7 @@ export function Settings() {
         <div className="p-5 sm:p-6">
           <div className="flex gap-3 rounded-xl border border-primary-100 bg-primary-50 p-4 text-sm leading-6 text-primary-900">
             <ShieldCheck size={20} className="mt-0.5 shrink-0" />
-            <p>Your Gemini key is stored in this browser's localStorage and is readable by scripts running on this origin. Use a restricted key for personal use only. Validation Ledger has no backend, account system, or cloud database.</p>
+            <p>Your Gemini key is kept in memory for this page session only and is cleared when the page reloads or closes. Use a restricted key for personal use only. Validation Ledger has no backend, account system, or cloud database.</p>
           </div>
           <label className="mt-5 block">
             <span className="field-label">Gemini API Key</span>
@@ -78,7 +74,7 @@ export function Settings() {
               <button type="button" onClick={handleSaveApiKey} className="button-primary">{isSaved ? <Check size={17} /> : <Save size={17} />}{isSaved ? 'Saved' : 'Save Key'}</button>
             </span>
           </label>
-          <p className="mt-2 text-xs text-surface-500">Create a key in <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="font-semibold text-primary-700 hover:underline">Google AI Studio</a>. Browser-stored keys are appropriate only for personal, local use.</p>
+          <p className="mt-2 text-xs text-surface-500">Create a key in <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="font-semibold text-primary-700 hover:underline">Google AI Studio</a>. You will need to enter it again after reloading the page.</p>
         </div>
       </section>
 

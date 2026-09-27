@@ -1,4 +1,4 @@
-import posthog from 'posthog-js';
+import posthog, { type BeforeSendFn, type CaptureResult, type Properties } from 'posthog-js';
 
 type AnalyticsEventProperties = {
   application_loaded: { entry_point: 'direct' };
@@ -14,10 +14,67 @@ type AnalyticsEventProperties = {
 
 // A non-sensitive runtime marker used to distinguish a rebuilt privacy-safe
 // preview from an older cached deployment during acceptance testing.
-export const privacyTelemetryBuild = 'privacy-safe-v2';
+export const privacyTelemetryBuild = 'privacy-safe-v3';
 
 export type AnalyticsEvent = keyof AnalyticsEventProperties;
 type Capture = <Event extends AnalyticsEvent>(event: Event, properties: AnalyticsEventProperties[Event]) => void;
+
+const analyticsEventPropertyKeys: Record<AnalyticsEvent, readonly string[]> = {
+  application_loaded: ['entry_point'],
+  project_created: ['project_stage'],
+  source_created: ['source_type'],
+  source_notes_saved: ['has_content'],
+  manual_evidence_created: ['source_type'],
+  hypothesis_created: ['importance'],
+  decision_created: ['confidence', 'linked_evidence_count', 'linked_hypothesis_count'],
+  backup_exported: [],
+  backup_imported: [],
+};
+
+// PostHog needs these transport properties to ingest an event. Every other
+// property is dropped at the last possible point before the request is sent.
+const requiredTransportPropertyKeys = ['token', 'distinct_id', '$geoip_disable'] as const;
+
+function isAnalyticsEventName(event: string): event is AnalyticsEvent {
+  return Object.prototype.hasOwnProperty.call(analyticsEventPropertyKeys, event);
+}
+
+/**
+ * Enforce the application's telemetry contract immediately before PostHog
+ * transport. This protects against SDK-added automatic context and against a
+ * future caller accidentally passing arbitrary properties to capture().
+ */
+export const sanitizeTelemetryEvent: BeforeSendFn = (event) => {
+  if (!event || !isAnalyticsEventName(event.event)) return null;
+
+  const source = event.properties ?? {};
+  const applicationProperties: Record<string, unknown> = {};
+  for (const key of analyticsEventPropertyKeys[event.event]) {
+    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+      applicationProperties[key] = source[key];
+    }
+  }
+
+  if (!isSafeProperties(event.event, applicationProperties as AnalyticsEventProperties[typeof event.event])) {
+    return null;
+  }
+
+  const properties: Properties = {};
+  for (const key of requiredTransportPropertyKeys) {
+    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+      properties[key] = source[key];
+    }
+  }
+  Object.assign(properties, applicationProperties);
+
+  const sanitized: CaptureResult = {
+    uuid: event.uuid,
+    event: event.event,
+    properties,
+  };
+  if (event.timestamp) sanitized.timestamp = event.timestamp;
+  return sanitized;
+};
 
 function isSafeProperties<Event extends AnalyticsEvent>(event: Event, properties: AnalyticsEventProperties[Event]) {
   const value = properties as Record<string, unknown>;
@@ -70,6 +127,7 @@ export function getAnalyticsConfig(apiHost: string) {
     disable_session_recording: true,
     person_profiles: 'never' as const,
     persistence: 'memory' as const,
+    before_send: sanitizeTelemetryEvent,
     property_blacklist: [
       '$current_url',
       '$host',

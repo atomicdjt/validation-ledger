@@ -104,9 +104,9 @@ test('prevents duplicate project creation on a rapid double-click', async ({ pag
 });
 
 test('prevents duplicate source creation on overlapping submits', async ({ page }) => {
-  await page.goto('/sources');
   await ensureActiveProject(page);
-  await page.goto('/sources');
+  await page.getByRole('link', { name: /Sources/ }).click();
+  await expect(page.getByRole('button', { name: 'Add Source' })).toBeVisible();
   await page.getByRole('button', { name: 'Add Source' }).click();
   await page.getByLabel('Participant / Identifier').fill('Rapid Source');
   const createSourceButton = page.getByRole('button', { name: 'Create & Continue' });
@@ -116,9 +116,9 @@ test('prevents duplicate source creation on overlapping submits', async ({ page 
 });
 
 test('prevents duplicate hypothesis creation on overlapping submits', async ({ page }) => {
-  await page.goto('/hypotheses');
   await ensureActiveProject(page);
-  await page.goto('/hypotheses');
+  await page.getByRole('link', { name: /Hypotheses/ }).click();
+  await expect(page.getByRole('button', { name: 'Add Hypothesis' })).toBeVisible();
   await page.getByRole('button', { name: 'Add Hypothesis' }).click();
   await page.getByLabel('Hypothesis statement').fill('Rapid hypothesis');
   const addHypothesisButton = page.getByRole('button', { name: 'Add Hypothesis' });
@@ -128,9 +128,9 @@ test('prevents duplicate hypothesis creation on overlapping submits', async ({ p
 });
 
 test('prevents duplicate decision creation on overlapping submits', async ({ page }) => {
-  await page.goto('/decisions');
   await ensureActiveProject(page);
-  await page.goto('/decisions');
+  await page.getByRole('link', { name: /Decisions/ }).click();
+  await expect(page.getByRole('button', { name: 'Record Decision' })).toBeVisible();
   await page.getByRole('button', { name: 'Record Decision' }).click();
   await page.getByLabel('Decision Title *').fill('Rapid decision');
   const recordDecisionButton = page.getByRole('button', { name: 'Record Decision' }).last();

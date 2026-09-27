@@ -5,6 +5,9 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { injectDemoData } from './db/demoData';
 import { initializeAnalytics, privacyTelemetryBuild } from './services/analytics';
 import './index.css';
+import { clearLegacyPersistedGeminiApiKey } from './services/apiKeySession';
+
+clearLegacyPersistedGeminiApiKey();
 
 const root = createRoot(document.getElementById('root')!);
 document.documentElement.dataset.telemetryBuild = privacyTelemetryBuild;
