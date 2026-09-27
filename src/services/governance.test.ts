@@ -1,10 +1,19 @@
 import 'fake-indexeddb/auto';
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { db } from '../db/db';
-import { createRevision, updateDecisionWithGovernance } from './governance';
-import { verifyLedgerIntegrity, hashData, RevisionHashPayload } from './integrity';
-import type { Decision, Revision } from '../db/models';
+import { createRevision } from './governance';
+import { buildRevisionHashPayload, hashRevision, verifyLedgerIntegrity, verifyRevisionChains } from './integrity';
+import type { Revision } from '../db/models';
 import { generateId } from '../utils/id';
+
+async function hashedRevision(id: string, previousHash: string, newState: unknown): Promise<Revision> {
+  const payload = buildRevisionHashPayload('decision', 'ent1', 'proj1', 1, 'actor1', {}, newState, `revision ${id}`, previousHash);
+  return {
+    id, projectId: 'proj1', entityType: 'decision', entityId: 'ent1', timestamp: 1, actor: 'actor1',
+    previousState: JSON.stringify({}), newState: JSON.stringify(newState), reason: `revision ${id}`,
+    hash: await hashRevision(payload), previousHash,
+  };
+}
 
 describe('governance adversarial tests', () => {
   beforeEach(async () => {
@@ -74,14 +83,14 @@ describe('governance adversarial tests', () => {
     await createRevision('proj1', 'decision', 'ent1', 'actor1', null, { title: '1' }, 'create');
     await createRevision('proj1', 'decision', 'ent1', 'actor1', { title: '1' }, { title: '2' }, 'update');
     const revisions = await db.revisions.toArray();
-    // Sort by timestamp just in case
-    revisions.sort((a, b) => a.timestamp - b.timestamp);
-    await db.revisions.update(revisions[1].id, { previousHash: 'forged_prev_hash' });
+    const genesis = revisions.find((revision) => revision.previousHash === '0')!;
+    const successor = revisions.find((revision) => revision.previousHash === genesis.hash)!;
+    await db.revisions.update(successor.id, { previousHash: 'forged_prev_hash' });
     
     const result = await verifyLedgerIntegrity();
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect((result as any).reason).toBe('PREVIOUS_HASH_MISMATCH');
+      expect((result as any).reason).toBe('HASH_MISMATCH');
     }
   });
 
@@ -91,13 +100,16 @@ describe('governance adversarial tests', () => {
     await createRevision('proj1', 'decision', 'ent1', 'actor1', { title: '2' }, { title: '3' }, 'update2');
     
     const revisions = await db.revisions.toArray();
-    revisions.sort((a, b) => a.timestamp - b.timestamp);
-    await db.revisions.delete(revisions[1].id); // delete intermediate
+    const genesis = revisions.find((revision) => revision.previousHash === '0')!;
+    const middle = revisions.find((revision) => revision.previousHash === genesis.hash)!;
+    const finalRevision = revisions.find((revision) => revision.previousHash === middle.hash)!;
+    expect(finalRevision).toBeTruthy();
+    await db.revisions.delete(middle.id);
     
     const result = await verifyLedgerIntegrity();
     expect(result.valid).toBe(false);
     if (!result.valid) {
-      expect((result as any).reason).toBe('PREVIOUS_HASH_MISMATCH');
+      expect((result as any).reason).toBe('MISSING_PREDECESSOR');
     }
   });
 
@@ -128,25 +140,57 @@ describe('governance adversarial tests', () => {
     }
   });
   test('Scenario I: Concurrent writes do not fork the chain', async () => {
-    await createRevision('proj1', 'decision', 'ent2', 'actor1', null, { title: 'initial' }, 'create');
-    
-    // Fire 20 updates concurrently
-    const promises = [];
-    for (let i = 0; i < 20; i++) {
-      promises.push(createRevision('proj1', 'decision', 'ent2', 'actor1', { title: 'initial' }, { title: `update-${i}` }, 'concurrent update'));
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    try {
+      await createRevision('proj1', 'decision', 'ent2', 'actor1', null, { title: 'initial' }, 'create');
+
+      const promises = [];
+      for (let i = 0; i < 20; i++) {
+        promises.push(createRevision('proj1', 'decision', 'ent2', 'actor1', { title: 'initial' }, { title: `update-${i}` }, 'concurrent update'));
+      }
+      await Promise.all(promises);
+    } finally {
+      now.mockRestore();
     }
-    await Promise.all(promises);
 
     const result = await verifyLedgerIntegrity();
     expect(result.valid).toBe(true);
 
-    const revisions = await db.revisions.where('entityId').equals('ent2').sortBy('timestamp');
+    const revisions = await db.revisions.where('entityId').equals('ent2').toArray();
     expect(revisions.length).toBe(21);
-    
-    // Check that each previousHash points to the preceding revision
-    for (let i = 1; i < revisions.length; i++) {
-      expect(revisions[i].previousHash).toBe(revisions[i - 1].hash);
+
+    const genesis = revisions.filter((revision) => revision.previousHash === '0');
+    expect(genesis).toHaveLength(1);
+    const successors = new Map<string, Revision[]>();
+    for (const revision of revisions.filter((revision) => revision.previousHash !== '0')) {
+      const linked = successors.get(revision.previousHash) ?? [];
+      linked.push(revision);
+      successors.set(revision.previousHash, linked);
     }
+    expect([...successors.values()].every((linked) => linked.length === 1)).toBe(true);
+
+    const visited = new Set<string>();
+    let current: Revision | undefined = genesis[0];
+    while (current) {
+      visited.add(current.hash);
+      current = successors.get(current.hash)?.[0];
+    }
+    expect(visited.size).toBe(21);
+  });
+
+  test('topology verifier rejects validly hashed forks, duplicate hashes, and multiple genesis revisions', async () => {
+    const genesis = await hashedRevision('r1', '0', { title: 'first' });
+    const successor = await hashedRevision('r2', genesis.hash, { title: 'second' });
+    const fork = await hashedRevision('r3', genesis.hash, { title: 'fork' });
+    const forkResult = await verifyRevisionChains([genesis, successor, fork]);
+    expect(forkResult).toMatchObject({ valid: false, reason: 'CHAIN_FORK' });
+
+    const duplicateResult = await verifyRevisionChains([genesis, successor, { ...successor, id: 'r2-copy' }]);
+    expect(duplicateResult).toMatchObject({ valid: false, reason: 'DUPLICATE_HASH' });
+
+    const secondGenesis = await hashedRevision('r4', '0', { title: 'another root' });
+    const multipleGenesisResult = await verifyRevisionChains([genesis, secondGenesis]);
+    expect(multipleGenesisResult).toMatchObject({ valid: false, reason: 'MULTIPLE_GENESIS' });
   });
 
   test('E2E: Complete causal chain triggers downstream flags and verifies', async () => {
