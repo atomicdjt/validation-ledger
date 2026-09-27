@@ -94,7 +94,7 @@ The scoring suite covers source independence, segment diversity, behavioral evid
 
 ## Data ownership and backups
 
-The IndexedDB database is named `ValidationLedgerDatabase`. Data is tied to the current browser profile and site origin. Use **Settings → Export backup** regularly; clearing browser storage can remove local records. Backup import validates the supported schema before replacing current data in a single transaction.
+The IndexedDB database is named `ValidationLedgerDatabase`. Data is tied to the current browser profile and site origin. Use **Settings → Export backup** regularly; clearing browser storage can remove local records. Current-format backup import validates the supported schema and verifies hash-linked revision chains before replacing current data in one transaction. Format-1 backups can be restored for data preservation, but they predate revision history and are explicitly marked as historically unverifiable.
 
 The live demo does not receive or retain application data on a server. Optional AI extraction sends the selected text and request directly from the browser to Google's API using the key supplied by the user.
 

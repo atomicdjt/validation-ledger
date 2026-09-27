@@ -13,6 +13,7 @@ export function Settings() {
   const [isSaved, setIsSaved] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
+  const [importWarning, setImportWarning] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -41,7 +42,10 @@ export function Settings() {
     try {
       setIsImporting(true);
       setImportError('');
-      setActiveProject(await importDatabase(importText));
+      setImportWarning('');
+      const imported = await importDatabase(importText);
+      setActiveProject(imported.projectId);
+      setImportWarning(imported.integrityWarning ?? '');
       analytics.track('backup_imported', {});
       window.location.assign('/');
     } catch (caughtError) {
@@ -111,6 +115,7 @@ export function Settings() {
             </div>
             <textarea value={importText} onChange={(event) => setImportText(event.target.value)} className="field-control mt-3 min-h-28 resize-y font-mono text-xs" placeholder="Paste backup JSON here…" />
             {importError ? <p className="mt-2 text-sm text-red-600" role="alert">{importError}</p> : null}
+            {importWarning ? <p className="mt-2 text-sm text-amber-700" role="status">{importWarning}</p> : null}
             <button type="button" onClick={() => void handleImport()} disabled={!importText.trim() || isImporting} className="button-danger mt-3"><Upload size={17} />{isImporting ? 'Validating…' : 'Restore Backup'}</button>
           </div>
         </div>

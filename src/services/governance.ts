@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 import { generateId } from '../utils/id';
-import { hashData, buildRevisionHashPayload, hashRevision, RevisionHashPayload } from './integrity';
+import { hashData, buildRevisionHashPayload, hashRevision, findRevisionChainTail } from './integrity';
 import type { Decision, Revision } from '../db/models';
 
 let governanceLock = Promise.resolve();
@@ -16,6 +16,11 @@ async function acquireLock() {
   return release!;
 }
 
+async function previousHashFor(entityId: string): Promise<string> {
+  const tail = await findRevisionChainTail(await db.revisions.where('entityId').equals(entityId).toArray());
+  return tail?.hash ?? '0';
+}
+
 export async function createRevision(
   projectId: string,
   entityType: Revision['entityType'],
@@ -27,8 +32,7 @@ export async function createRevision(
 ): Promise<void> {
   const release = await acquireLock();
   try {
-    const previousRevisions = await db.revisions.where('entityId').equals(entityId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entityId);
     
     const timestamp = Date.now();
     const payload = buildRevisionHashPayload(
@@ -79,8 +83,7 @@ export async function updateDecisionWithGovernance(
     const updated = { ...previous, ...updates };
     updated.integrityHash = await hashData(updated);
 
-    const previousRevisions = await db.revisions.where('entityId').equals(decisionId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(decisionId);
 
     const timestamp = Date.now();
     const payload = buildRevisionHashPayload(
@@ -129,8 +132,7 @@ export async function createEntityWithGovernance<T extends { id: string, project
 ): Promise<void> {
   const release = await acquireLock();
   try {
-    const previousRevisions = await db.revisions.where('entityId').equals(entity.id).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entity.id);
     
     const timestamp = Date.now();
     const payload = buildRevisionHashPayload(
@@ -185,8 +187,7 @@ export async function updateEntityWithGovernance<T extends { id: string, project
 
     const updated = { ...previous, ...updates };
 
-    const previousRevisions = await db.revisions.where('entityId').equals(entityId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entityId);
 
     const timestamp = Date.now();
     const payload = buildRevisionHashPayload(
@@ -238,8 +239,7 @@ export async function createDecisionWithGovernance(
     const finalDecision = { ...decision };
     finalDecision.integrityHash = await hashData(finalDecision);
     
-    const previousRevisions = await db.revisions.where('entityId').equals(finalDecision.id).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(finalDecision.id);
     
     const timestamp = Date.now();
     const payload = buildRevisionHashPayload(

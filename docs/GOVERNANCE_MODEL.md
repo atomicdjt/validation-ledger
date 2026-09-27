@@ -14,11 +14,11 @@ This document defines the core entities and concepts in the Validation Ledger go
 *   **Risk:** A potential negative outcome or uncertainty associated with a Decision. Risks must be assessed for severity and status (unassessed, mitigated, accepted).
 *   **Constraint:** (Currently represented via Segment Characteristics or implicitly in Risks/Assumptions). A boundary or limitation within which a Decision must be made (e.g., budget, timeline, technical debt).
 *   **Review:** A formal evaluation of a Decision by a designated reviewer (e.g., a stakeholder or subject matter expert). Reviews ensure accountability and quality control before a Decision is finalized or after significant new information comes to light.
-*   **Revision:** An immutable ledger entry capturing any change to a core entity (Decision, Evidence, Claim, Assumption, Alternative, Risk, Review). Revisions guarantee complete auditability, showing who changed what, when, and why, along with cryptographic hashes to prevent silent tampering.
+*   **Revision:** An application-layer append-only, hash-linked entry capturing a change to a core entity (Decision, Evidence, Claim, Assumption, Alternative, Risk, Review). Revisions record who changed what, when, and why; they support local tamper-evident verification but do not make the browser database immutable.
 
 ## Lifecycle & Governance Concepts
 
 *   **Outcome:** The real-world result of a implemented Decision. Tracking Outcomes closes the feedback loop, allowing the team to measure whether the Decision achieved its intended effect.
 *   **Provenance:** The unbroken chain of origin for a piece of Evidence. The system maintains a `provenanceState` (e.g., `exact`, `normalized`, `unverified`) to guarantee that an Evidence excerpt accurately reflects the original raw source text. If the source text is altered or the excerpt cannot be located, provenance degrades to `unverified`.
-*   **Supersession:** The process by which newer, more accurate Evidence or a revised Decision replaces an older one. The older entity's state changes (e.g., to `superseded`), but it remains in the immutable history for audit purposes.
+*   **Supersession:** The process by which newer, more accurate Evidence or a revised Decision replaces an older one. The older entity's state changes (e.g., to `superseded`), and the governed revision history remains available for audit subject to the local integrity model.
 *   **Contradiction:** A state where new Evidence directly conflicts with an existing Claim or Decision, or where two pieces of Evidence offer conflicting signals. The system surfaces contradictions to force the team to resolve the ambiguity and update their understanding.

@@ -2,6 +2,8 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from './db';
 import { exportDatabase, importDatabase } from './exportImport';
+import type { Revision } from './models';
+import { buildRevisionHashPayload, hashRevision } from '../services/integrity';
 
 const complete = () => ({
   formatVersion: 2, exportedAt: new Date(0).toISOString(),
@@ -13,12 +15,30 @@ const complete = () => ({
   decisions:[{id:'d',projectId:'p',title:'D',description:'Summary',reason:'R',confidence:'moderate',status:'accepted',alternatives:'Alternative B',assumptions:'Users will adopt this',validationMethod:'Run a usability session',outcome:'Validated by five users',createdAt:7,reviewDate:8}],
   evidenceDecisionLinks:[{id:'ed',projectId:'p',evidenceId:'e',decisionId:'d'}],
   hypothesisDecisionLinks:[{id:'hd',projectId:'p',hypothesisId:'h',decisionId:'d'}],
-  revisions: [{id:'rev', projectId:'p', entityType: 'decision', entityId: 'd', timestamp: 9, actor: 'user', previousState: '{}', newState: '{}', reason: '', hash: '', previousHash: ''}],
+  revisions: [] as Revision[],
   assumptions: [{id:'a', projectId:'p', decisionId:'d', statement:'assumption', status:'unresolved'}],
   alternatives: [{id:'alt', projectId:'p', decisionId:'d', title:'alt1', description:'', status:'considered'}],
   risks: [{id:'r', projectId:'p', decisionId:'d', description:'risk', severity:'low', status:'unassessed'}],
   reviews: [{id:'revw', projectId:'p', decisionId:'d', reviewer:'user', status:'requested', comments:'', date:10}],
 });
+
+async function createRevision(id: string, previousHash: string, newState: unknown, timestamp: number): Promise<Revision> {
+  const payload = buildRevisionHashPayload('decision', 'd', 'p', timestamp, 'user', {}, newState, `revision ${id}`, previousHash);
+  return {
+    id, projectId: 'p', entityType: 'decision', entityId: 'd', timestamp, actor: 'user',
+    previousState: JSON.stringify({}), newState: JSON.stringify(newState), reason: `revision ${id}`,
+    hash: await hashRevision(payload), previousHash,
+  };
+}
+
+async function completeWithRevisionChain() {
+  const backup = complete();
+  const genesis = await createRevision('rev-1', '0', { title: 'first' }, 9);
+  const middle = await createRevision('rev-2', genesis.hash, { title: 'second' }, 9);
+  const tail = await createRevision('rev-3', middle.hash, { title: 'third' }, 9);
+  backup.revisions = [genesis, middle, tail];
+  return { backup, genesis, middle, tail };
+}
 
 beforeEach(async()=>{await db.delete(); await db.open();});
 
@@ -69,5 +89,50 @@ describe('backup validation and atomic restore',()=>{
     await importDatabase(JSON.stringify(backup));
     expect(await db.evidenceSignals.get('e')).toMatchObject({provenanceState:'unverified',isDirect:false});
     expect(await db.hypotheses.get('h')).toMatchObject({confidenceScore:20,status:'weak-evidence'});
+  });
+
+  it('imports a valid current backup with a hash-linked revision chain', async () => {
+    const { backup } = await completeWithRevisionChain();
+    const imported = await importDatabase(JSON.stringify(backup));
+    expect(imported).toEqual({ projectId: 'p', integrityWarning: undefined });
+    expect(await db.revisions.count()).toBe(3);
+  });
+
+  it.each([
+    ['changed newState', async (backup: Awaited<ReturnType<typeof completeWithRevisionChain>>) => { backup.backup.revisions[1].newState = JSON.stringify({ title: 'forged' }); }],
+    ['changed reason', async (backup: Awaited<ReturnType<typeof completeWithRevisionChain>>) => { backup.backup.revisions[1].reason = 'forged'; }],
+    ['changed previousHash', async (backup: Awaited<ReturnType<typeof completeWithRevisionChain>>) => { backup.backup.revisions[1].previousHash = 'forged'; }],
+    ['deleted intermediate revision', async (backup: Awaited<ReturnType<typeof completeWithRevisionChain>>) => { backup.backup.revisions = [backup.genesis, backup.tail]; }],
+    ['chain fork', async (backup: Awaited<ReturnType<typeof completeWithRevisionChain>>) => {
+      backup.backup.revisions.push(await createRevision('rev-fork', backup.genesis.hash, { title: 'fork' }, 9));
+    }],
+  ])('rejects a %s revision chain before replacing existing data', async (_name, mutate) => {
+    const existingProject = { ...complete().projects[0], name: 'Existing local project' };
+    await db.projects.add(existingProject);
+    const backup = await completeWithRevisionChain();
+    await mutate(backup);
+    await expect(importDatabase(JSON.stringify(backup.backup))).rejects.toThrow(/revision integrity verification failed/i);
+    expect(await db.projects.get('p')).toEqual(existingProject);
+  });
+
+  it('rejects malformed JSON without touching existing data', async () => {
+    const existingProject = { ...complete().projects[0], name: 'Existing local project' };
+    await db.projects.add(existingProject);
+    await expect(importDatabase('{not json')).rejects.toThrow(/not valid JSON/i);
+    expect(await db.projects.get('p')).toEqual(existingProject);
+  });
+
+  it('imports format-1 data without fabricating cryptographic history', async () => {
+    const backup = complete() as unknown as Record<string, unknown>;
+    backup.formatVersion = 1;
+    delete backup.revisions;
+    delete backup.assumptions;
+    delete backup.alternatives;
+    delete backup.risks;
+    delete backup.reviews;
+    const imported = await importDatabase(JSON.stringify(backup));
+    expect(imported.integrityWarning).toMatch(/predates revision history/i);
+    expect(await db.projects.get('p')).toBeTruthy();
+    expect(await db.revisions.count()).toBe(0);
   });
 });

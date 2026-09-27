@@ -3,6 +3,7 @@ import type { Decision, EvidenceDecisionLink, EvidenceSignal, Hypothesis, Hypoth
 import { EVIDENCE_CLASSIFICATIONS, EVIDENCE_RELATIONSHIPS } from '../services/evidenceIntegrity';
 import { verifyExcerptProvenance } from '../services/evidenceIntegrity';
 import { calculateScore } from '../services/scoring';
+import { verifyRevisionChains } from '../services/integrity';
 
 export const BACKUP_FORMAT_VERSION = 2;
 export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
@@ -26,6 +27,11 @@ export interface DatabaseExport {
   alternatives: Alternative[];
   risks: Risk[];
   reviews: Review[];
+}
+
+export interface ImportResult {
+  projectId: string | null;
+  integrityWarning?: string;
 }
 
 type Row = Record<string, unknown>;
@@ -78,8 +84,9 @@ function safeJson(value: unknown, path: string, depth = 0): void {
     safeJson(value[key], `${path}.${key}`, depth + 1);
   }
 }
-function rows(data: Row, key: typeof TABLES[number]): Row[] {
+function rows(data: Row, key: typeof TABLES[number], allowMissing = false): Row[] {
   const value = data[key];
+  if (value === undefined && allowMissing) return [];
   if (!Array.isArray(value)) fail(`${key} must be an array.`);
   if (value.length > MAX_RECORDS_PER_TABLE) fail(`${key} exceeds the ${MAX_RECORDS_PER_TABLE.toLocaleString()} record limit.`);
   value.forEach((item, index) => { if (!isRow(item)) fail(`${key}[${index}] must be an object.`); });
@@ -91,7 +98,8 @@ function rows(data: Row, key: typeof TABLES[number]): Row[] {
 function validateBackup(data: Row): DatabaseExport {
   if (data.formatVersion !== 1 && data.formatVersion !== BACKUP_FORMAT_VERSION) fail(`unsupported format version ${String(data.formatVersion)}.`);
   if (typeof data.exportedAt !== 'string' || Number.isNaN(Date.parse(data.exportedAt))) fail('exportedAt must be a valid ISO date string.');
-  const tableRows = Object.fromEntries(TABLES.map((table) => [table, rows(data, table)])) as Record<typeof TABLES[number], Row[]>;
+  const legacyTablesWithoutGovernanceHistory = new Set<typeof TABLES[number]>(['revisions', 'assumptions', 'alternatives', 'risks', 'reviews']);
+  const tableRows = Object.fromEntries(TABLES.map((table) => [table, rows(data, table, data.formatVersion === 1 && legacyTablesWithoutGovernanceHistory.has(table))])) as Record<typeof TABLES[number], Row[]>;
   const total = TABLES.reduce((sum, table) => sum + tableRows[table].length, 0);
   if (total > MAX_TOTAL_RECORDS) fail(`record count exceeds the ${MAX_TOTAL_RECORDS.toLocaleString()} total limit.`);
 
@@ -127,14 +135,23 @@ export async function exportDatabase(): Promise<string> {
   return JSON.stringify(data, null, 2);
 }
 
-export async function importDatabase(jsonString: string): Promise<string | null> {
+export async function importDatabase(jsonString: string): Promise<ImportResult> {
   if (new TextEncoder().encode(jsonString).byteLength > MAX_BACKUP_BYTES) fail('file exceeds the 25 MB backup limit.');
   let parsed: unknown; try { parsed=JSON.parse(jsonString); } catch { fail('file is not valid JSON.'); }
   if (!isRow(parsed)) fail('expected a JSON object.');
   const data=validateBackup(parsed);
+  const revisionVerification = await verifyRevisionChains(data.revisions);
+  if (revisionVerification.valid === false) {
+    fail(`revision integrity verification failed for entity "${revisionVerification.entityId}", revision "${revisionVerification.revisionId}": ${revisionVerification.reason}.`);
+  }
   await db.transaction('rw', [db.projects,db.segments,db.sources,db.evidenceSignals,db.hypotheses,db.decisions,db.evidenceDecisionLinks,db.hypothesisDecisionLinks,db.revisions,db.assumptions,db.alternatives,db.risks,db.reviews], async()=>{
     await Promise.all([db.projects.clear(),db.segments.clear(),db.sources.clear(),db.evidenceSignals.clear(),db.hypotheses.clear(),db.decisions.clear(),db.evidenceDecisionLinks.clear(),db.hypothesisDecisionLinks.clear(),db.revisions.clear(),db.assumptions.clear(),db.alternatives.clear(),db.risks.clear(),db.reviews.clear()]);
     await db.projects.bulkAdd(data.projects); await db.segments.bulkAdd(data.segments); await db.sources.bulkAdd(data.sources); await db.evidenceSignals.bulkAdd(data.evidenceSignals); await db.hypotheses.bulkAdd(data.hypotheses); await db.decisions.bulkAdd(data.decisions); await db.evidenceDecisionLinks.bulkAdd(data.evidenceDecisionLinks); await db.hypothesisDecisionLinks.bulkAdd(data.hypothesisDecisionLinks); await db.revisions.bulkAdd(data.revisions); await db.assumptions.bulkAdd(data.assumptions); await db.alternatives.bulkAdd(data.alternatives); await db.risks.bulkAdd(data.risks); await db.reviews.bulkAdd(data.reviews);
   });
-  return data.projects[0]?.id ?? null;
+  return {
+    projectId: data.projects[0]?.id ?? null,
+    integrityWarning: parsed.formatVersion === 1
+      ? 'Legacy backup imported. This format predates revision history, so its prior governance history cannot be cryptographically verified.'
+      : undefined,
+  };
 }
