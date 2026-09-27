@@ -44,7 +44,7 @@ Validation Ledger is designed for people who need to synthesize qualitative cust
 Typical workflows include:
 
 - customer-interview synthesis;
-- hypothesis tracking;
+- claim tracking;
 - product-discovery evidence review;
 - explicit decision records;
 - preservation of contradictory signals;

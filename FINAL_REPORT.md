@@ -9,8 +9,8 @@ The application follows a local-first architecture using React 19, TypeScript, a
 ## C. Data Model & Schema
 The relational data model represents the logical steps of product discovery:
 *   **Projects, Segments, Sources:** Organize the raw inputs.
-*   **EvidenceSignals:** Extracted, atomic insights with explicit `provenanceState`.
-*   **Claims (Hypotheses):** Testable statements validated by Evidence.
+*   **Evidence:** Extracted, atomic insights with explicit `provenanceState`.
+*   **Claims:** Testable statements validated by Evidence.
 *   **Decisions:** Impactful choices linked to Evidence and Claims, supported by Assumptions, Constraints, Risks, and Alternatives.
 *   **Reviews & Revisions:** Immutable ledger entries for auditability and governance.
 
