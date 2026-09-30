@@ -1,6 +1,7 @@
 import { db } from './db';
 import { generateId } from '../utils/id';
 import { useStore } from '../store/useStore';
+import { calculateScore } from '../services/scoring';
 
 export async function injectDemoData() {
   const count = await db.projects.count();
@@ -146,7 +147,6 @@ export async function injectDemoData() {
     { id: generateId(), projectId, hypothesisId: h2Id, decisionId }
   ]);
 
-
   const a1Id = generateId();
   const a2Id = generateId();
   await db.assumptions.bulkAdd([
@@ -220,6 +220,170 @@ export async function injectDemoData() {
       date: Date.now()
     }
   ]);
+
+  // A second, deliberately mixed project keeps the guided demo from implying
+  // that Validation Ledger only accumulates positive evidence.
+  const mixedProjectId = generateId();
+  const mixedSegmentId = generateId();
+  const mixedHypothesisId = generateId();
+  const mixedSourceIds = [generateId(), generateId(), generateId()];
+  const mixedEvidenceIds = [generateId(), generateId(), generateId()];
+
+  await db.projects.add({
+    id: mixedProjectId,
+    name: 'Evidence Review Workspace',
+    productDescription: 'A fictional workspace for teams that review operational evidence before adopting a new workflow.',
+    validationObjective: 'Determine whether a review workspace earns enough value to justify a recurring team purchase.',
+    stage: 'discovery',
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+
+  await db.segments.add({
+    id: mixedSegmentId,
+    projectId: mixedProjectId,
+    name: 'Operations Leads',
+    description: 'Fictional operations leaders responsible for repeatable review processes.',
+    characteristics: ['owns review workflows', 'tracks operational risk'],
+    priority: 'high'
+  });
+
+  await db.hypotheses.add({
+    id: mixedHypothesisId,
+    projectId: mixedProjectId,
+    statement: 'Operations leads will pay for a review workspace that reduces evidence-chasing without hiding contradictory signals.',
+    category: 'value proposition',
+    status: 'mixed',
+    importance: 'high',
+    confidenceScore: 0,
+    createdAt: Date.now()
+  });
+
+  const mixedSourceTexts = [
+    'Pilot lead: We would pay for this if every decision links back to the source passage and the review queue stays current.',
+    'Pilot observer: The team cut weekly evidence-chasing from three hours to one hour during the fictional trial.',
+    'Pilot skeptic: We already keep this in a shared document, and another workspace would add maintenance work without enough return.'
+  ];
+  await db.sources.bulkAdd([
+    {
+      id: mixedSourceIds[0],
+      projectId: mixedProjectId,
+      segmentId: mixedSegmentId,
+      participantId: 'fictional-ops-lead-a',
+      type: 'interview',
+      date: Date.now(),
+      rawText: mixedSourceTexts[0],
+      metadata: { title: 'Synthetic purchase conversation' },
+      tags: ['pricing', 'traceability']
+    },
+    {
+      id: mixedSourceIds[1],
+      projectId: mixedProjectId,
+      segmentId: mixedSegmentId,
+      participantId: 'fictional-ops-lead-b',
+      type: 'observation',
+      date: Date.now(),
+      rawText: mixedSourceTexts[1],
+      metadata: { title: 'Synthetic workflow observation' },
+      tags: ['behavior', 'workflow']
+    },
+    {
+      id: mixedSourceIds[2],
+      projectId: mixedProjectId,
+      segmentId: mixedSegmentId,
+      participantId: 'fictional-ops-lead-c',
+      type: 'interview',
+      date: Date.now(),
+      rawText: mixedSourceTexts[2],
+      metadata: { title: 'Synthetic contradictory interview' },
+      tags: ['counterevidence', 'adoption']
+    }
+  ]);
+
+  await db.evidenceSignals.bulkAdd([
+    {
+      id: mixedEvidenceIds[0],
+      projectId: mixedProjectId,
+      sourceId: mixedSourceIds[0],
+      segmentId: mixedSegmentId,
+      hypothesisId: mixedHypothesisId,
+      relationship: 'supports',
+      classification: 'willingness_to_pay',
+      statement: 'A fictional buyer states a conditional willingness to pay for traceable decisions.',
+      exactExcerpt: 'We would pay for this if every decision links back to the source passage and the review queue stays current.',
+      isDirect: true,
+      confidence: 8,
+      notes: 'Synthetic behavioral signal; the condition remains an adoption risk.',
+      createdAt: Date.now(),
+      provenanceState: 'exact'
+    },
+    {
+      id: mixedEvidenceIds[1],
+      projectId: mixedProjectId,
+      sourceId: mixedSourceIds[1],
+      segmentId: mixedSegmentId,
+      hypothesisId: mixedHypothesisId,
+      relationship: 'supports',
+      classification: 'positive_reaction',
+      statement: 'A fictional observation records a measurable reduction in evidence-chasing time.',
+      exactExcerpt: 'The team cut weekly evidence-chasing from three hours to one hour during the fictional trial.',
+      isDirect: true,
+      confidence: 7,
+      notes: 'Synthetic observed behavior, not a claim about real users.',
+      createdAt: Date.now(),
+      provenanceState: 'exact'
+    },
+    {
+      id: mixedEvidenceIds[2],
+      projectId: mixedProjectId,
+      sourceId: mixedSourceIds[2],
+      segmentId: mixedSegmentId,
+      hypothesisId: mixedHypothesisId,
+      relationship: 'contradicts',
+      classification: 'objection',
+      statement: 'A fictional skeptic sees the workflow as duplicative maintenance work.',
+      exactExcerpt: 'We already keep this in a shared document, and another workspace would add maintenance work without enough return.',
+      isDirect: true,
+      confidence: 8,
+      notes: 'Material contradiction retained alongside the positive signals.',
+      createdAt: Date.now(),
+      provenanceState: 'exact'
+    }
+  ]);
+
+  const mixedEvidence = await db.evidenceSignals.where('hypothesisId').equals(mixedHypothesisId).toArray();
+  const mixedAnalysis = calculateScore(mixedEvidence);
+  await db.hypotheses.update(mixedHypothesisId, {
+    status: mixedAnalysis.status,
+    confidenceScore: mixedAnalysis.score,
+    lastReviewed: Date.now()
+  });
+
+  const mixedDecisionId = generateId();
+  await db.decisions.add({
+    id: mixedDecisionId,
+    projectId: mixedProjectId,
+    title: 'Run a bounded workflow evaluation before recurring purchase',
+    description: 'Do not adopt the review workspace on synthetic evidence alone; run a bounded evaluation that tests traceability value against maintenance cost.',
+    reason: 'The synthetic evidence is mixed: two signals support traceability value while one material objection says the workflow duplicates a shared document.',
+    confidence: 'low',
+    status: 'proposed',
+    alternatives: 'Adopt immediately; stop pursuing the workspace as a standalone product.',
+    assumptions: 'A concrete workflow evaluation can distinguish traceability value from added maintenance work.',
+    validationMethod: 'Ask a qualified practitioner for a recent example, incumbent workflow, repeat-use trigger, and strongest reason not to use the product.',
+    outcome: 'Pending external evaluation; synthetic demo only.',
+    createdAt: Date.now()
+  });
+
+  await db.evidenceDecisionLinks.bulkAdd(
+    mixedEvidenceIds.map((evidenceId) => ({ id: generateId(), projectId: mixedProjectId, evidenceId, decisionId: mixedDecisionId }))
+  );
+  await db.hypothesisDecisionLinks.add({
+    id: generateId(),
+    projectId: mixedProjectId,
+    hypothesisId: mixedHypothesisId,
+    decisionId: mixedDecisionId
+  });
 
   // Set as active project
   useStore.getState().setActiveProject(projectId);
