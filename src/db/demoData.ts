@@ -147,6 +147,80 @@ export async function injectDemoData() {
     { id: generateId(), projectId, hypothesisId: h2Id, decisionId }
   ]);
 
+  const a1Id = generateId();
+  const a2Id = generateId();
+  await db.assumptions.bulkAdd([
+    {
+      id: a1Id,
+      projectId,
+      decisionId,
+      statement: "We can accurately classify command risk programmatically.",
+      status: "unresolved"
+    },
+    {
+      id: a2Id,
+      projectId,
+      decisionId,
+      statement: "Users will tolerate pausing their workflow for genuinely dangerous commands.",
+      status: "unresolved"
+    }
+  ]);
+
+  const alt1Id = generateId();
+  const alt2Id = generateId();
+  const alt3Id = generateId();
+  await db.alternatives.bulkAdd([
+    {
+      id: alt1Id,
+      projectId,
+      decisionId,
+      title: "Fully autonomous",
+      description: "Allow all commands, no confirmation.",
+      status: "rejected"
+    },
+    {
+      id: alt2Id,
+      projectId,
+      decisionId,
+      title: "Fully manual",
+      description: "Require confirmation for every single command.",
+      status: "rejected"
+    },
+    {
+      id: alt3Id,
+      projectId,
+      decisionId,
+      title: "Sandboxed execution only",
+      description: "Run in isolated environments only.",
+      status: "rejected"
+    }
+  ]);
+
+  const r1Id = generateId();
+  await db.risks.bulkAdd([
+    {
+      id: r1Id,
+      projectId,
+      decisionId,
+      description: "Risk classifier may falsely identify safe commands as dangerous, annoying users.",
+      severity: "medium",
+      status: "mitigated"
+    }
+  ]);
+
+  const rev1Id = generateId();
+  await db.reviews.bulkAdd([
+    {
+      id: rev1Id,
+      projectId,
+      decisionId,
+      reviewer: "VP of Engineering",
+      status: "approved",
+      comments: "This balances velocity and safety. Approved for Beta Cohort C.",
+      date: Date.now()
+    }
+  ]);
+
   // A second, deliberately mixed project keeps the guided demo from implying
   // that Validation Ledger only accumulates positive evidence.
   const mixedProjectId = generateId();

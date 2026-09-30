@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from './db';
 import { injectDemoData } from './demoData';
 import { calculateScore } from '../services/scoring';
+import { useStore } from '../store/useStore';
 
 beforeEach(async () => {
   await db.delete();
@@ -12,6 +13,18 @@ beforeEach(async () => {
 describe('guided demo data', () => {
   it('includes a synthetic mixed-evidence project with traceable citations', async () => {
     await injectDemoData();
+
+    const existingProject = (await db.projects.toArray()).find(
+      (candidate) => candidate.name === 'AI Autonomous Agent Platform',
+    );
+    expect(existingProject).toBeDefined();
+    const existingDecision = await db.decisions.where('projectId').equals(existingProject!.id).first();
+    expect(existingDecision).toBeDefined();
+    expect(await db.assumptions.where('decisionId').equals(existingDecision!.id).count()).toBe(2);
+    expect(await db.alternatives.where('decisionId').equals(existingDecision!.id).count()).toBe(3);
+    expect(await db.risks.where('decisionId').equals(existingDecision!.id).count()).toBe(1);
+    expect(await db.reviews.where('decisionId').equals(existingDecision!.id).count()).toBe(1);
+    expect(useStore.getState().activeProjectId).toBe(existingProject!.id);
 
     const project = (await db.projects.toArray()).find(
       (candidate) => candidate.name === 'Evidence Review Workspace',
