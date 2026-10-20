@@ -2,7 +2,7 @@
 
 **A local-first decision-governance system for preserving the reasoning, evidence, assumptions, risks, alternatives, and review history behind consequential decisions.**
 
-**[Try the live demo](https://validation-ledger.vercel.app) · [See how scoring works](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
+**[Try the live demo](https://validation-ledger.vercel.app) · [Reproduce / audit](docs/REVIEWER_QUICKSTART.md) · [Scoring model](#scoring-model) · [Architecture](docs/ARCHITECTURE.md) · [Contribute](CONTRIBUTING.md)**
 
 ```text
 SOURCE  →  EVIDENCE  →  CLAIM  →  DECISION (with alternatives, assumptions, constraints, and risks)
