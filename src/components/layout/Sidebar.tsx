@@ -15,7 +15,7 @@ import { useStore } from '../../store/useStore';
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Sources', path: '/sources', icon: MessageSquareText },
-  { name: 'Hypotheses', path: '/hypotheses', icon: Lightbulb },
+  { name: 'Claims', path: '/hypotheses', icon: Lightbulb },
   { name: 'Decisions', path: '/decisions', icon: Scale },
   { name: 'Report', path: '/report', icon: FileText },
 ];

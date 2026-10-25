@@ -1,8 +1,9 @@
 import { db } from './db';
-import type { Decision, EvidenceDecisionLink, EvidenceSignal, Hypothesis, HypothesisDecisionLink, Project, Segment, Source } from './models';
+import type { Decision, EvidenceDecisionLink, EvidenceSignal, Hypothesis, HypothesisDecisionLink, Project, Segment, Source, Revision, Assumption, Alternative, Risk, Review } from './models';
 import { EVIDENCE_CLASSIFICATIONS, EVIDENCE_RELATIONSHIPS } from '../services/evidenceIntegrity';
 import { verifyExcerptProvenance } from '../services/evidenceIntegrity';
 import { calculateScore } from '../services/scoring';
+import { verifyRevisionChains } from '../services/integrity';
 
 export const BACKUP_FORMAT_VERSION = 2;
 export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
@@ -21,10 +22,20 @@ export interface DatabaseExport {
   decisions: Decision[];
   evidenceDecisionLinks: EvidenceDecisionLink[];
   hypothesisDecisionLinks: HypothesisDecisionLink[];
+  revisions: Revision[];
+  assumptions: Assumption[];
+  alternatives: Alternative[];
+  risks: Risk[];
+  reviews: Review[];
+}
+
+export interface ImportResult {
+  projectId: string | null;
+  integrityWarning?: string;
 }
 
 type Row = Record<string, unknown>;
-const TABLES = ['projects', 'segments', 'sources', 'evidenceSignals', 'hypotheses', 'decisions', 'evidenceDecisionLinks', 'hypothesisDecisionLinks'] as const;
+const TABLES = ['projects', 'segments', 'sources', 'evidenceSignals', 'hypotheses', 'decisions', 'evidenceDecisionLinks', 'hypothesisDecisionLinks', 'revisions', 'assumptions', 'alternatives', 'risks', 'reviews'] as const;
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 function fail(message: string): never { throw new Error(`Invalid backup: ${message}`); }
@@ -73,8 +84,9 @@ function safeJson(value: unknown, path: string, depth = 0): void {
     safeJson(value[key], `${path}.${key}`, depth + 1);
   }
 }
-function rows(data: Row, key: typeof TABLES[number]): Row[] {
+function rows(data: Row, key: typeof TABLES[number], allowMissing = false): Row[] {
   const value = data[key];
+  if (value === undefined && allowMissing) return [];
   if (!Array.isArray(value)) fail(`${key} must be an array.`);
   if (value.length > MAX_RECORDS_PER_TABLE) fail(`${key} exceeds the ${MAX_RECORDS_PER_TABLE.toLocaleString()} record limit.`);
   value.forEach((item, index) => { if (!isRow(item)) fail(`${key}[${index}] must be an object.`); });
@@ -86,7 +98,8 @@ function rows(data: Row, key: typeof TABLES[number]): Row[] {
 function validateBackup(data: Row): DatabaseExport {
   if (data.formatVersion !== 1 && data.formatVersion !== BACKUP_FORMAT_VERSION) fail(`unsupported format version ${String(data.formatVersion)}.`);
   if (typeof data.exportedAt !== 'string' || Number.isNaN(Date.parse(data.exportedAt))) fail('exportedAt must be a valid ISO date string.');
-  const tableRows = Object.fromEntries(TABLES.map((table) => [table, rows(data, table)])) as Record<typeof TABLES[number], Row[]>;
+  const legacyTablesWithoutGovernanceHistory = new Set<typeof TABLES[number]>(['revisions', 'assumptions', 'alternatives', 'risks', 'reviews']);
+  const tableRows = Object.fromEntries(TABLES.map((table) => [table, rows(data, table, data.formatVersion === 1 && legacyTablesWithoutGovernanceHistory.has(table))])) as Record<typeof TABLES[number], Row[]>;
   const total = TABLES.reduce((sum, table) => sum + tableRows[table].length, 0);
   if (total > MAX_TOTAL_RECORDS) fail(`record count exceeds the ${MAX_TOTAL_RECORDS.toLocaleString()} total limit.`);
 
@@ -99,6 +112,11 @@ function validateBackup(data: Row): DatabaseExport {
   const decisions = tableRows.decisions.map((r, i): Decision => { const path=`decisions[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), title:text(r,'title',path,false), description:text(r,'description',path), reason:text(r,'reason',path), confidence:enumValue(r,'confidence',path,['low','moderate','high']), status: r.status === undefined ? 'accepted' : enumValue(r,'status',path,['proposed','accepted','rejected','reverted','validated']), alternatives:r.alternatives === undefined ? '' : text(r,'alternatives',path), assumptions:r.assumptions === undefined ? '' : text(r,'assumptions',path), validationMethod:r.validationMethod === undefined ? '' : text(r,'validationMethod',path), outcome:r.outcome === undefined ? '' : text(r,'outcome',path), createdAt:number(r,'createdAt',path), reviewDate:optionalNumber(r,'reviewDate',path) }; });
   const evidenceDecisionLinks = tableRows.evidenceDecisionLinks.map((r,i):EvidenceDecisionLink => { const path=`evidenceDecisionLinks[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), evidenceId:text(r,'evidenceId',path,false), decisionId:text(r,'decisionId',path,false) }; });
   const hypothesisDecisionLinks = tableRows.hypothesisDecisionLinks.map((r,i):HypothesisDecisionLink => { const path=`hypothesisDecisionLinks[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), hypothesisId:text(r,'hypothesisId',path,false), decisionId:text(r,'decisionId',path,false) }; });
+  const revisions = tableRows.revisions ? tableRows.revisions.map((r,i):Revision => { const path=`revisions[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), entityType:enumValue(r,'entityType',path,['decision','evidence','hypothesis','assumption','alternative','risk','review']), entityId:text(r,'entityId',path,false), timestamp:number(r,'timestamp',path), actor:text(r,'actor',path), previousState:text(r,'previousState',path), newState:text(r,'newState',path), reason:text(r,'reason',path), hash:text(r,'hash',path), previousHash:text(r,'previousHash',path) }; }) : [];
+  const assumptions = tableRows.assumptions ? tableRows.assumptions.map((r,i):Assumption => { const path=`assumptions[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), decisionId:text(r,'decisionId',path,false), statement:text(r,'statement',path,false), status:enumValue(r,'status',path,['unresolved','validated','invalidated']) }; }) : [];
+  const alternatives = tableRows.alternatives ? tableRows.alternatives.map((r,i):Alternative => { const path=`alternatives[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), decisionId:text(r,'decisionId',path,false), title:text(r,'title',path,false), description:text(r,'description',path), status:enumValue(r,'status',path,['considered','rejected','selected']) }; }) : [];
+  const risks = tableRows.risks ? tableRows.risks.map((r,i):Risk => { const path=`risks[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), decisionId:text(r,'decisionId',path,false), description:text(r,'description',path,false), severity:enumValue(r,'severity',path,['low','medium','high']), status:enumValue(r,'status',path,['unassessed','mitigated','accepted']) }; }) : [];
+  const reviews = tableRows.reviews ? tableRows.reviews.map((r,i):Review => { const path=`reviews[${i}]`; return { id:text(r,'id',path,false), projectId:text(r,'projectId',path,false), decisionId:text(r,'decisionId',path,false), reviewer:text(r,'reviewer',path,false), status:enumValue(r,'status',path,['requested','approved','approved_with_reservations','rejected','needs_revision']), comments:text(r,'comments',path), date:number(r,'date',path) }; }) : [];
 
   const projectMap=new Map(projects.map(x=>[x.id,x])); const segmentMap=new Map(segments.map(x=>[x.id,x])); const sourceMap=new Map(sources.map(x=>[x.id,x])); const hypothesisMap=new Map(hypotheses.map(x=>[x.id,x])); const evidenceMap=new Map(evidenceSignals.map(x=>[x.id,x])); const decisionMap=new Map(decisions.map(x=>[x.id,x]));
   segments.forEach(x=>{if(!projectMap.has(x.projectId)) fail(`segment "${x.id}" references a missing project.`);});
@@ -109,22 +127,31 @@ function validateBackup(data: Row): DatabaseExport {
   evidenceDecisionLinks.forEach(x=>{if(evidenceMap.get(x.evidenceId)?.projectId!==x.projectId || decisionMap.get(x.decisionId)?.projectId!==x.projectId) fail(`evidence-decision link "${x.id}" is invalid or cross-project.`);});
   hypothesisDecisionLinks.forEach(x=>{if(hypothesisMap.get(x.hypothesisId)?.projectId!==x.projectId || decisionMap.get(x.decisionId)?.projectId!==x.projectId) fail(`hypothesis-decision link "${x.id}" is invalid or cross-project.`);});
   hypotheses.forEach((hypothesis)=>{const result=calculateScore(evidenceSignals.filter((evidence)=>evidence.hypothesisId===hypothesis.id)); hypothesis.confidenceScore=result.score; hypothesis.status=result.status;});
-  return { formatVersion:2, exportedAt:data.exportedAt as string, projects, segments, sources, evidenceSignals, hypotheses, decisions, evidenceDecisionLinks, hypothesisDecisionLinks };
+  return { formatVersion:2, exportedAt:data.exportedAt as string, projects, segments, sources, evidenceSignals, hypotheses, decisions, evidenceDecisionLinks, hypothesisDecisionLinks, revisions, assumptions, alternatives, risks, reviews };
 }
 
 export async function exportDatabase(): Promise<string> {
-  const data: DatabaseExport = { formatVersion:2, exportedAt:new Date().toISOString(), projects:await db.projects.toArray(), segments:await db.segments.toArray(), sources:await db.sources.toArray(), evidenceSignals:await db.evidenceSignals.toArray(), hypotheses:await db.hypotheses.toArray(), decisions:await db.decisions.toArray(), evidenceDecisionLinks:await db.evidenceDecisionLinks.toArray(), hypothesisDecisionLinks:await db.hypothesisDecisionLinks.toArray() };
+  const data: DatabaseExport = { formatVersion:2, exportedAt:new Date().toISOString(), projects:await db.projects.toArray(), segments:await db.segments.toArray(), sources:await db.sources.toArray(), evidenceSignals:await db.evidenceSignals.toArray(), hypotheses:await db.hypotheses.toArray(), decisions:await db.decisions.toArray(), evidenceDecisionLinks:await db.evidenceDecisionLinks.toArray(), hypothesisDecisionLinks:await db.hypothesisDecisionLinks.toArray(), revisions:await db.revisions.toArray(), assumptions:await db.assumptions.toArray(), alternatives:await db.alternatives.toArray(), risks:await db.risks.toArray(), reviews:await db.reviews.toArray() };
   return JSON.stringify(data, null, 2);
 }
 
-export async function importDatabase(jsonString: string): Promise<string | null> {
+export async function importDatabase(jsonString: string): Promise<ImportResult> {
   if (new TextEncoder().encode(jsonString).byteLength > MAX_BACKUP_BYTES) fail('file exceeds the 25 MB backup limit.');
   let parsed: unknown; try { parsed=JSON.parse(jsonString); } catch { fail('file is not valid JSON.'); }
   if (!isRow(parsed)) fail('expected a JSON object.');
   const data=validateBackup(parsed);
-  await db.transaction('rw', [db.projects,db.segments,db.sources,db.evidenceSignals,db.hypotheses,db.decisions,db.evidenceDecisionLinks,db.hypothesisDecisionLinks], async()=>{
-    await Promise.all([db.projects.clear(),db.segments.clear(),db.sources.clear(),db.evidenceSignals.clear(),db.hypotheses.clear(),db.decisions.clear(),db.evidenceDecisionLinks.clear(),db.hypothesisDecisionLinks.clear()]);
-    await db.projects.bulkAdd(data.projects); await db.segments.bulkAdd(data.segments); await db.sources.bulkAdd(data.sources); await db.evidenceSignals.bulkAdd(data.evidenceSignals); await db.hypotheses.bulkAdd(data.hypotheses); await db.decisions.bulkAdd(data.decisions); await db.evidenceDecisionLinks.bulkAdd(data.evidenceDecisionLinks); await db.hypothesisDecisionLinks.bulkAdd(data.hypothesisDecisionLinks);
+  const revisionVerification = await verifyRevisionChains(data.revisions);
+  if (revisionVerification.valid === false) {
+    fail(`revision integrity verification failed for entity "${revisionVerification.entityId}", revision "${revisionVerification.revisionId}": ${revisionVerification.reason}.`);
+  }
+  await db.transaction('rw', [db.projects,db.segments,db.sources,db.evidenceSignals,db.hypotheses,db.decisions,db.evidenceDecisionLinks,db.hypothesisDecisionLinks,db.revisions,db.assumptions,db.alternatives,db.risks,db.reviews], async()=>{
+    await Promise.all([db.projects.clear(),db.segments.clear(),db.sources.clear(),db.evidenceSignals.clear(),db.hypotheses.clear(),db.decisions.clear(),db.evidenceDecisionLinks.clear(),db.hypothesisDecisionLinks.clear(),db.revisions.clear(),db.assumptions.clear(),db.alternatives.clear(),db.risks.clear(),db.reviews.clear()]);
+    await db.projects.bulkAdd(data.projects); await db.segments.bulkAdd(data.segments); await db.sources.bulkAdd(data.sources); await db.evidenceSignals.bulkAdd(data.evidenceSignals); await db.hypotheses.bulkAdd(data.hypotheses); await db.decisions.bulkAdd(data.decisions); await db.evidenceDecisionLinks.bulkAdd(data.evidenceDecisionLinks); await db.hypothesisDecisionLinks.bulkAdd(data.hypothesisDecisionLinks); await db.revisions.bulkAdd(data.revisions); await db.assumptions.bulkAdd(data.assumptions); await db.alternatives.bulkAdd(data.alternatives); await db.risks.bulkAdd(data.risks); await db.reviews.bulkAdd(data.reviews);
   });
-  return data.projects[0]?.id ?? null;
+  return {
+    projectId: data.projects[0]?.id ?? null,
+    integrityWarning: parsed.formatVersion === 1
+      ? 'Legacy backup imported. This format predates revision history, so its prior governance history cannot be cryptographically verified.'
+      : undefined,
+  };
 }

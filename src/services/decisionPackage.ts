@@ -25,9 +25,8 @@ export async function createDecisionPackage(decisionId: string) {
   const risks = await db.risks.where('decisionId').equals(decisionId).toArray();
   const reviews = await db.reviews.where('decisionId').equals(decisionId).toArray();
 
-  const pkg = {
+  const content = {
     schemaVersion: "1.0",
-    generatedAt: Date.now(),
     decision,
     claims,
     evidence: uniqueEvidence,
@@ -39,7 +38,11 @@ export async function createDecisionPackage(decisionId: string) {
     revisions,
   };
 
-  const manifestHash = await hashData(pkg);
+  const contentHash = await hashData(content);
 
-  return { ...pkg, manifestHash };
+  return {
+    contentHash,
+    generatedAt: Date.now(),
+    ...content,
+  };
 }

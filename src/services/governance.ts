@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 import { generateId } from '../utils/id';
-import { hashData } from './integrity';
+import { hashData, buildRevisionHashPayload, hashRevision, findRevisionChainTail } from './integrity';
 import type { Decision, Revision } from '../db/models';
 
 let governanceLock = Promise.resolve();
@@ -16,6 +16,11 @@ async function acquireLock() {
   return release!;
 }
 
+async function previousHashFor(entityId: string): Promise<string> {
+  const tail = await findRevisionChainTail(await db.revisions.where('entityId').equals(entityId).toArray());
+  return tail?.hash ?? '0';
+}
+
 export async function createRevision(
   projectId: string,
   entityType: Revision['entityType'],
@@ -27,25 +32,32 @@ export async function createRevision(
 ): Promise<void> {
   const release = await acquireLock();
   try {
-    const previousRevisions = await db.revisions.where('entityId').equals(entityId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entityId);
     
-    const hash = await hashData({
+    const timestamp = Date.now();
+    const payload = buildRevisionHashPayload(
+      entityType,
       entityId,
-      timestamp: Date.now(),
+      projectId,
+      timestamp,
+      actor,
+      previousState,
       newState,
+      reason,
       previousHash
-    });
+    );
+
+    const hash = await hashRevision(payload);
 
     const revision: Revision = {
       id: generateId(),
-      projectId,
-      entityType,
-      entityId,
-      timestamp: Date.now(),
+      projectId: payload.projectId,
+      entityType: payload.entityType as Revision['entityType'],
+      entityId: payload.entityId,
+      timestamp,
       actor,
-      previousState: JSON.stringify(previousState),
-      newState: JSON.stringify(newState),
+      previousState: JSON.stringify(payload.previousState),
+      newState: JSON.stringify(payload.newState),
       reason,
       hash,
       previousHash,
@@ -71,25 +83,32 @@ export async function updateDecisionWithGovernance(
     const updated = { ...previous, ...updates };
     updated.integrityHash = await hashData(updated);
 
-    const previousRevisions = await db.revisions.where('entityId').equals(decisionId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(decisionId);
 
-    const hash = await hashData({
-      entityId: decisionId,
-      timestamp: Date.now(),
-      newState: updated,
+    const timestamp = Date.now();
+    const payload = buildRevisionHashPayload(
+      'decision',
+      decisionId,
+      previous.projectId,
+      timestamp,
+      actor,
+      previous,
+      updated,
+      reason,
       previousHash
-    });
+    );
+
+    const hash = await hashRevision(payload);
 
     const revision: Revision = {
       id: generateId(),
-      projectId: previous.projectId,
-      entityType: 'decision',
-      entityId: decisionId,
-      timestamp: Date.now(),
+      projectId: payload.projectId,
+      entityType: payload.entityType as Revision['entityType'],
+      entityId: payload.entityId,
+      timestamp,
       actor,
-      previousState: JSON.stringify(previous),
-      newState: JSON.stringify(updated),
+      previousState: JSON.stringify(payload.previousState),
+      newState: JSON.stringify(payload.newState),
       reason,
       hash,
       previousHash,
@@ -113,25 +132,32 @@ export async function createEntityWithGovernance<T extends { id: string, project
 ): Promise<void> {
   const release = await acquireLock();
   try {
-    const previousRevisions = await db.revisions.where('entityId').equals(entity.id).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entity.id);
     
-    const hash = await hashData({
-      entityId: entity.id,
-      timestamp: Date.now(),
-      newState: entity,
+    const timestamp = Date.now();
+    const payload = buildRevisionHashPayload(
+      entityType,
+      entity.id,
+      entity.projectId,
+      timestamp,
+      actor,
+      null,
+      entity,
+      reason,
       previousHash
-    });
+    );
+
+    const hash = await hashRevision(payload);
 
     const revision: Revision = {
       id: generateId(),
-      projectId: entity.projectId,
-      entityType,
-      entityId: entity.id,
-      timestamp: Date.now(),
+      projectId: payload.projectId,
+      entityType: payload.entityType as Revision['entityType'],
+      entityId: payload.entityId,
+      timestamp,
       actor,
-      previousState: JSON.stringify(null),
-      newState: JSON.stringify(entity),
+      previousState: JSON.stringify(payload.previousState),
+      newState: JSON.stringify(payload.newState),
       reason,
       hash,
       previousHash,
@@ -161,25 +187,32 @@ export async function updateEntityWithGovernance<T extends { id: string, project
 
     const updated = { ...previous, ...updates };
 
-    const previousRevisions = await db.revisions.where('entityId').equals(entityId).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(entityId);
 
-    const hash = await hashData({
+    const timestamp = Date.now();
+    const payload = buildRevisionHashPayload(
+      entityType,
       entityId,
-      timestamp: Date.now(),
-      newState: updated,
+      previous.projectId,
+      timestamp,
+      actor,
+      previous,
+      updated,
+      reason,
       previousHash
-    });
+    );
+
+    const hash = await hashRevision(payload);
 
     const revision: Revision = {
       id: generateId(),
-      projectId: previous.projectId,
-      entityType,
-      entityId,
-      timestamp: Date.now(),
+      projectId: payload.projectId,
+      entityType: payload.entityType as Revision['entityType'],
+      entityId: payload.entityId,
+      timestamp,
       actor,
-      previousState: JSON.stringify(previous),
-      newState: JSON.stringify(updated),
+      previousState: JSON.stringify(payload.previousState),
+      newState: JSON.stringify(payload.newState),
       reason,
       hash,
       previousHash,
@@ -206,25 +239,32 @@ export async function createDecisionWithGovernance(
     const finalDecision = { ...decision };
     finalDecision.integrityHash = await hashData(finalDecision);
     
-    const previousRevisions = await db.revisions.where('entityId').equals(finalDecision.id).sortBy('timestamp');
-    const previousHash = previousRevisions.length > 0 ? previousRevisions[previousRevisions.length - 1].hash : '0';
+    const previousHash = await previousHashFor(finalDecision.id);
     
-    const hash = await hashData({
-      entityId: finalDecision.id,
-      timestamp: Date.now(),
-      newState: finalDecision,
+    const timestamp = Date.now();
+    const payload = buildRevisionHashPayload(
+      'decision',
+      finalDecision.id,
+      finalDecision.projectId,
+      timestamp,
+      actor,
+      null,
+      finalDecision,
+      reason,
       previousHash
-    });
+    );
+
+    const hash = await hashRevision(payload);
 
     const revision: Revision = {
       id: generateId(),
-      projectId: finalDecision.projectId,
-      entityType: 'decision',
-      entityId: finalDecision.id,
-      timestamp: Date.now(),
+      projectId: payload.projectId,
+      entityType: payload.entityType as Revision['entityType'],
+      entityId: payload.entityId,
+      timestamp,
       actor,
-      previousState: JSON.stringify(null),
-      newState: JSON.stringify(finalDecision),
+      previousState: JSON.stringify(payload.previousState),
+      newState: JSON.stringify(payload.newState),
       reason,
       hash,
       previousHash,

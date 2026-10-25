@@ -43,10 +43,10 @@ test('creates a traceable source-to-decision workflow and exports a backup', asy
   await page.getByLabel('Validation objective').fill('Verify traceability');
   await page.getByRole('button', { name: 'Create Project' }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-  await page.getByRole('link', { name: /Hypotheses/ }).click();
-  await page.getByRole('button', { name: 'Add Hypothesis' }).click();
-  await page.getByLabel('Hypothesis statement').fill('Teams need auditable evidence');
-  await page.getByRole('button', { name: 'Add Hypothesis' }).click();
+  await page.getByRole('link', { name: /Claims/ }).click();
+  await page.getByRole('button', { name: 'Add Claim' }).click();
+  await page.getByLabel('Claim statement').fill('Teams need auditable evidence');
+  await page.getByRole('button', { name: 'Add Claim' }).click();
   await page.getByRole('link', { name: /Sources/ }).click();
   await page.getByRole('button', { name: /Add Source/ }).click();
   await page.getByLabel('Participant / Identifier').fill('Participant E2E');
@@ -117,14 +117,14 @@ test('prevents duplicate source creation on overlapping submits', async ({ page 
 
 test('prevents duplicate hypothesis creation on overlapping submits', async ({ page }) => {
   await ensureActiveProject(page);
-  await page.getByRole('link', { name: /Hypotheses/ }).click();
-  await expect(page.getByRole('button', { name: 'Add Hypothesis' })).toBeVisible();
-  await page.getByRole('button', { name: 'Add Hypothesis' }).click();
-  await page.getByLabel('Hypothesis statement').fill('Rapid hypothesis');
-  const addHypothesisButton = page.getByRole('button', { name: 'Add Hypothesis' });
+  await page.getByRole('link', { name: /Claims/ }).click();
+  await expect(page.getByRole('button', { name: 'Add Claim' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add Claim' }).click();
+  await page.getByLabel('Claim statement').fill('Rapid claim');
+  const addHypothesisButton = page.getByRole('button', { name: 'Add Claim' });
   await Promise.all([addHypothesisButton.click(), addHypothesisButton.click()]);
-  await expect(page.getByText('Rapid hypothesis', { exact: true })).toBeVisible();
-  expect(await countRecordsByField(page, 'hypotheses', 'statement', 'Rapid hypothesis')).toBe(1);
+  await expect(page.getByText('Rapid claim', { exact: true })).toBeVisible();
+  expect(await countRecordsByField(page, 'hypotheses', 'statement', 'Rapid claim')).toBe(1);
 });
 
 test('prevents duplicate decision creation on overlapping submits', async ({ page }) => {
@@ -168,3 +168,4 @@ test('@a11y primary routes have no automatically detectable serious violations',
     expect(results.violations.filter((item) => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
   }
 });
+
