@@ -13,6 +13,8 @@ npm ci
 npm test
 npm run lint
 npm run build
+npm audit --omit=dev
+npm audit --audit-level=moderate
 npx playwright install chromium
 npm run test:e2e
 ```
@@ -31,6 +33,6 @@ For a manual demo, `npm run dev` starts the local interface. The default core wo
 
 The deterministic tests and Playwright checks exercise source matching, heuristic scoring, backup/integrity flows, and selected accessibility pathways. A passing suite is not independent evidence of correct real-world research conclusions, customer traction, WCAG certification, or safety/compliance. Browser `IndexedDB` is local to an origin and can be cleared.
 
-**Release boundary:** [PR #38](https://github.com/atomicdjt/validation-ledger/pull/38) proposes updated mixed-evidence demo seeding and is not merged into `main` at the October 20 audit. Compare the current branch before using its behavior as release evidence.
+**Release boundary:** At the October 20 audit, [PR #38](https://github.com/atomicdjt/validation-ledger/pull/38) was not merged into `main`. Recheck the current base branch and the exact commit under review before treating mixed-evidence demo seeding or any passing local gate as release evidence.
 
 For reproduction limitations and the complete gate, see [release validation](VALIDATION.md) and [security](../SECURITY.md).
