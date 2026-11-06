@@ -36,6 +36,33 @@ async function ensureActiveProject(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 }
 
+async function addFictionalResearchEvidence(
+  page: import('@playwright/test').Page,
+  identifier: string,
+  quote: string,
+  claim: string,
+  relationship: 'Supports' | 'Contradicts',
+) {
+  await page.getByRole('link', { name: /Sources/ }).click();
+  await page.getByRole('button', { name: 'Add Source' }).click();
+  await page.getByLabel('Participant / Identifier').fill(identifier);
+  await page.getByRole('button', { name: 'Create & Continue' }).click();
+  await page.getByLabel('Transcript or notes').fill(quote);
+  await page.getByRole('button', { name: 'Save Notes' }).click();
+  await page.getByRole('button', { name: 'Add Manual' }).click();
+  await page.getByLabel('Observation Summary').fill(`${relationship} signal from synthetic interview material.`);
+  await page.getByLabel('Provenance Quote').fill(quote);
+  await expect(page.getByText('exact', { exact: true })).toBeVisible();
+  const directEvidence = page.getByRole('checkbox', { name: 'Direct evidence' });
+  await expect(directEvidence).toBeEnabled();
+  if (!(await directEvidence.isChecked())) await directEvidence.click();
+  await expect(directEvidence).toBeChecked();
+  await page.getByLabel('Link to Hypothesis').selectOption({ label: claim });
+  const relationshipButton = page.getByRole('button', { name: relationship, exact: true });
+  await relationshipButton.click();
+  await expect(relationshipButton).toHaveAttribute('aria-pressed', 'true');
+}
+
 test('creates a traceable source-to-decision workflow and exports a backup', async ({ page }) => {
   await page.getByRole('button', { name: 'New Project' }).click();
   await page.getByLabel('Project name').fill('E2E Validation');
@@ -74,6 +101,108 @@ test('creates a traceable source-to-decision workflow and exports a backup', asy
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download Backup' }).click();
   expect((await download).suggestedFilename()).toMatch(/^validation-ledger-backup-/);
+});
+
+test('researcher exercise preserves exact support and counterevidence in a proposed decision', async ({ page }) => {
+  const claim = 'Small independent grocers will pay for a shared board that flags substitutions before packing.';
+  const ownerA = 'I would pay for a shared board if it flags a substitution before packing. Last month, two shoppers arrived after we swapped an item without telling them. It has to take less than a minute per order.';
+  const ownerB = 'We tried a substitution message for every item last month. Staff spent more time answering replies than packing, and I would not pay for another dashboard.';
+
+  await page.getByRole('button', { name: 'New Project' }).click();
+  await page.getByLabel('Project name').fill('Maple Market substitutions');
+  await page.getByLabel('Product description').fill('A pickup-order board that flags substitutions before packing.');
+  await page.getByLabel('Validation objective').fill('Check whether independent grocers need a staff substitution workflow.');
+  await page.getByRole('button', { name: 'Create Project' }).click();
+  await page.getByRole('link', { name: /Claims/ }).click();
+  await page.getByRole('button', { name: 'Add Claim' }).click();
+  await page.getByLabel('Claim statement').fill(claim);
+  await page.getByRole('button', { name: 'Add Claim' }).click();
+
+  await addFictionalResearchEvidence(page, 'Fictional market owner A', ownerA, claim, 'Supports');
+  await addFictionalResearchEvidence(page, 'Fictional market owner B', ownerB, claim, 'Contradicts');
+  await page.getByRole('link', { name: /Claims/ }).click();
+  await expect(page.getByText('mixed', { exact: true })).toBeVisible();
+
+  await page.getByRole('link', { name: /Decisions/ }).click();
+  await page.getByRole('button', { name: 'Record Decision' }).click();
+  await page.getByLabel('Decision Title *').fill('Run a workflow test before pricing');
+  await page.getByLabel('Alternatives Considered').fill('Launch the paid board now; stop work.');
+  await page.getByLabel('Assumptions').fill('A triage workflow can reduce interruptions without adding staff work.');
+  await page.getByLabel('Validation Method').fill('Observe a short prototype workflow.');
+  await page.getByLabel('Outcome').fill('Synthetic exercise only; this establishes no real demand.');
+  await page.getByLabel('Status').selectOption('proposed');
+  await page.getByLabel('Confidence').selectOption('low');
+  await page.locator('label').filter({ hasText: claim }).locator('input[type="checkbox"]').check();
+  await page.locator('label').filter({ hasText: 'Supports signal from synthetic interview material.' }).locator('input[type="checkbox"]').check();
+  await page.locator('label').filter({ hasText: 'Contradicts signal from synthetic interview material.' }).locator('input[type="checkbox"]').check();
+  await page.getByRole('button', { name: 'Record Decision' }).last().click();
+  await expect(page.getByText('Run a workflow test before pricing', { exact: true })).toBeVisible();
+  await expect(page.getByText('proposed', { exact: true })).toBeVisible();
+  await expect(page.getByText('low Confidence', { exact: true })).toBeVisible();
+  await expect(page.locator('[title="1 hypotheses and 2 evidence signals linked"]')).toBeVisible();
+});
+
+test('restores a valid backup and replaces the current local workspace', async ({ page }) => {
+  await page.route('https://**', (route) => route.abort());
+  const blockedExternalRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') blockedExternalRequests.push(request.url());
+  });
+
+  const backup = {
+    formatVersion: 2,
+    exportedAt: new Date(0).toISOString(),
+    projects: [{ id: 'fictional-restore', name: 'Restored fictional workspace', productDescription: 'A synthetic product research exercise.', validationObjective: 'Check that a local backup can be restored.', stage: 'idea', createdAt: 1, updatedAt: 1 }],
+    segments: [], sources: [], evidenceSignals: [], hypotheses: [], decisions: [],
+    evidenceDecisionLinks: [], hypothesisDecisionLinks: [], revisions: [], assumptions: [], alternatives: [], risks: [], reviews: [],
+  };
+
+  await page.goto('/settings');
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByPlaceholder('Paste backup JSON here…').fill(JSON.stringify(backup));
+  await Promise.all([
+    page.waitForURL('http://127.0.0.1:4173/'),
+    page.getByRole('button', { name: 'Restore Backup' }).click(),
+  ]);
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await page.goto('/projects');
+  await expect(page.locator('article > button').filter({ hasText: 'Restored fictional workspace' })).toHaveCount(1);
+  await expect(page.locator('article > button').filter({ hasText: 'AI Autonomous Agent Platform' })).toHaveCount(0);
+  expect(blockedExternalRequests).toEqual([]);
+});
+
+test('rejects malformed restore input without deleting the existing workspace', async ({ page }) => {
+  await page.goto('/settings');
+  const before = await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('ValidationLedgerDatabase');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise<number>((resolve, reject) => {
+      const request = database.transaction('projects', 'readonly').objectStore('projects').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  });
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByPlaceholder('Paste backup JSON here…').fill('{not json');
+  await page.getByRole('button', { name: 'Restore Backup' }).click();
+  await expect(page.getByRole('alert')).toContainText('Invalid backup: file is not valid JSON.');
+  const after = await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('ValidationLedgerDatabase');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    return await new Promise<number>((resolve, reject) => {
+      const request = database.transaction('projects', 'readonly').objectStore('projects').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  });
+  expect(before).toBeGreaterThan(0);
+  expect(after).toBe(before);
 });
 
 test('prevents duplicate project creation on a rapid double-click', async ({ page }) => {
